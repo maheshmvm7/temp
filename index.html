@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>P2P File Transfer</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- QR generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- QR scanning -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- Compression -->
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>P2P FILE TRANSFER</h1>
+        <p>Direct browser-to-browser file transfer</p>
+    </header>
+
+    <div id="role-selection" class="screen">
+
+        <h2>Choose device</h2>
+
+        <div class="buttons">
+            <button id="send-btn">SEND FILE</button>
+            <button id="receive-btn">RECEIVE FILE</button>
+        </div>
+
+    </div>
+
+
+    <!-- SENDER -->
+
+    <div id="sender-screen" class="screen hidden">
+
+        <div class="top">
+            <button class="back-btn" onclick="location.reload()">← BACK</button>
+            <h2>SENDER</h2>
+        </div>
+
+        <div id="sender-status" class="status">
+            Creating connection...
+        </div>
+
+        <div id="offer-area">
+
+            <h3>Scan these QR codes on the receiving device</h3>
+
+            <div id="offer-qr" class="qr"></div>
+
+            <div class="qr-info">
+                <span id="offer-progress">1 / 1</span>
+            </div>
+
+            <div class="qr-controls">
+                <button id="offer-prev">PREVIOUS</button>
+                <button id="offer-next">NEXT</button>
+            </div>
+
+        </div>
+
+
+        <div id="answer-area" class="hidden">
+
+            <h3>Scan the answer QR codes</h3>
+
+            <div id="answer-scanner"></div>
+
+            <p id="answer-scan-status">
+                Point the camera at the receiver's QR code.
+            </p>
+
+        </div>
+
+
+        <div id="sender-file-area" class="hidden">
+
+            <h3>Select file</h3>
+
+            <input type="file" id="file-input">
+
+            <div id="file-info"></div>
+
+            <button id="send-file-btn">
+                SEND FILE
+            </button>
+
+            <div class="progress-container">
+                <div id="send-progress"></div>
+            </div>
+
+            <p id="send-progress-text"></p>
+
+        </div>
+
+    </div>
+
+
+    <!-- RECEIVER -->
+
+    <div id="receiver-screen" class="screen hidden">
+
+        <div class="top">
+            <button class="back-btn" onclick="location.reload()">← BACK</button>
+            <h2>RECEIVER</h2>
+        </div>
+
+        <div id="receiver-status" class="status">
+            Scan sender QR code
+        </div>
+
+        <div id="offer-scan-area">
+
+            <div id="offer-scanner"></div>
+
+            <p id="offer-scan-status">
+                Scan the sender's QR code.
+            </p>
+
+        </div>
+
+
+        <div id="receiver-answer-area" class="hidden">
+
+            <h3>Show these QR codes to the sender</h3>
+
+            <div id="receiver-answer-qr" class="qr"></div>
+
+            <div class="qr-info">
+                <span id="answer-progress">1 / 1</span>
+            </div>
+
+            <div class="qr-controls">
+                <button id="answer-prev">PREVIOUS</button>
+                <button id="answer-next">NEXT</button>
+            </div>
+
+        </div>
+
+
+        <div id="receive-file-area" class="hidden">
+
+            <h3>Receiving file</h3>
+
+            <div id="received-file-name"></div>
+
+            <div class="progress-container">
+                <div id="receive-progress"></div>
+            </div>
+
+            <p id="receive-progress-text"></p>
+
+            <a id="download-btn" class="download-btn hidden">
+                DOWNLOAD FILE
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
