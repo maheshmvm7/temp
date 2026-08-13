@@ -1,12 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>P2P Transfer</title>
 
     <link rel="stylesheet" href="style.css">
+
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 
     <!-- QR Generator -->
     <script src="qrcode.min.js"></script>
@@ -26,8 +33,13 @@
             </div>
 
             <div class="status">
+
                 <span id="status-dot"></span>
-                <span id="status-text">Waiting</span>
+
+                <span id="status-text">
+                    Starting...
+                </span>
+
             </div>
 
         </header>
@@ -41,10 +53,13 @@
                     PEER CONNECTION
                 </span>
 
-                <h1 id="title">Connect device</h1>
+                <h1>
+                    Connect device
+                </h1>
 
                 <p id="description">
-                    Scan this QR code from another device to establish a connection.</p>
+                    Show your QR code or scan another device.
+                </p>
 
             </div>
 
@@ -70,7 +85,7 @@
             </div>
 
 
-            <!-- QR -->
+            <!-- MY QR -->
 
             <div
                 id="qr-section"
@@ -83,6 +98,7 @@
 
                 </div>
 
+
                 <div class="peer-info">
 
                     <span class="label">
@@ -90,20 +106,20 @@
                     </span>
 
                     <span id="peer-id">
-                        Generating...
+                        Connecting...
                     </span>
 
                 </div>
 
+
                 <p class="hint">
-                    Open this page on another device
-                    and scan this QR code.
+                    Scan this QR code from another device.
                 </p>
 
             </div>
 
 
-            <!-- Scanner -->
+            <!-- SCANNER -->
 
             <div
                 id="scanner-section"
@@ -113,8 +129,8 @@
                 <div id="reader"></div>
 
                 <div
-                    class="scanner-message"
                     id="scanner-message"
+                    class="scanner-message"
                 >
                     Camera is starting...
                 </div>
@@ -122,7 +138,7 @@
             </div>
 
 
-            <!-- Connection Result -->
+            <!-- CONNECTION RESULT -->
 
             <div
                 id="connection-result"
@@ -130,7 +146,7 @@
             >
 
                 <span class="result-label">
-                    PEER FOUND
+                    CONNECTED
                 </span>
 
                 <strong id="connected-peer">
@@ -138,7 +154,7 @@
                 </strong>
 
                 <span class="result-status">
-                    QR handshake completed
+                    Peer-to-peer connection established
                 </span>
 
             </div>
@@ -147,7 +163,9 @@
 
     </main>
 
+
     <script src="script.js"></script>
 
 </body>
+
 </html>
