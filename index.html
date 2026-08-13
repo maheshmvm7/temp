@@ -1,709 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WebRTC Screen Share</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    :root {
-      --bg: #0a0a0f;
-      --surface: #13131a;
-      --border: #1e1e2e;
-      --accent: #00ffcc;
-      --accent2: #7c3aed;
-      --text: #e2e2f0;
-      --muted: #555570;
-      --danger: #ff4466;
-      --radius: 12px;
-    }
+    <title>P2P File Transfer</title>
 
-    body {
-      font-family: 'Syne', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 32px 16px;
-      background-image:
-        radial-gradient(ellipse 80% 40% at 50% -10%, rgba(0,255,204,0.06) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 30% at 80% 80%, rgba(124,58,237,0.06) 0%, transparent 70%);
-    }
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-    header {
-      text-align: center;
-      margin-bottom: 40px;
-    }
+    <!-- Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap"
+        rel="stylesheet"
+    >
 
-    header .badge {
-      display: inline-block;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      padding: 3px 10px;
-      border-radius: 100px;
-      margin-bottom: 16px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    h1 {
-      font-size: clamp(28px, 6vw, 48px);
-      font-weight: 800;
-      line-height: 1.1;
-      letter-spacing: -1px;
-    }
-
-    h1 span { color: var(--accent); }
-
-    header p {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 14px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      width: 100%;
-      max-width: 560px;
-      margin-bottom: 20px;
-    }
-
-    .card-title {
-      font-size: 11px;
-      font-family: 'JetBrains Mono', monospace;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
-
-    /* Step indicator */
-    .steps {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 28px;
-      width: 100%;
-      max-width: 560px;
-    }
-
-    .step {
-      flex: 1;
-      height: 3px;
-      background: var(--border);
-      border-radius: 99px;
-      transition: background 0.4s;
-    }
-    .step.active { background: var(--accent); }
-    .step.done { background: var(--accent2); }
-
-    /* Mode selector */
-    .mode-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .mode-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      padding: 24px 16px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.15s;
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-    }
-
-    .mode-btn:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-    }
-
-    .mode-btn .icon {
-      font-size: 32px;
-      line-height: 1;
-    }
-
-    .mode-btn .desc {
-      font-size: 11px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--muted);
-      font-weight: 400;
-      text-align: center;
-    }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 12px 24px;
-      border-radius: var(--radius);
-      border: none;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      width: 100%;
-    }
-
-    .btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
-    .btn:active:not(:disabled) { transform: translateY(0); }
-    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #000;
-      box-shadow: 0 0 24px rgba(0,255,204,0.2);
-    }
-
-    .btn-danger {
-      background: var(--danger);
-      color: #fff;
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    /* Input */
-    .input-wrap { position: relative; margin: 12px 0; }
-
-    input[type="text"] {
-      width: 100%;
-      padding: 12px 14px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    input[type="text"]:focus { border-color: var(--accent); }
-    input[type="text"]::placeholder { color: var(--muted); }
-
-    /* ID box */
-    .id-display {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      background: var(--bg);
-      border: 1px solid var(--accent);
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      margin: 12px 0;
-    }
-
-    .id-display code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 15px;
-      color: var(--accent);
-      flex: 1;
-      word-break: break-all;
-    }
-
-    .copy-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 16px;
-      padding: 4px;
-      transition: color 0.2s;
-      flex-shrink: 0;
-    }
-    .copy-btn:hover { color: var(--accent); }
-
-    /* Status */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: var(--radius);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      margin: 12px 0;
-    }
-
-    .status-bar.info { background: rgba(0,255,204,0.07); color: var(--accent); border: 1px solid rgba(0,255,204,0.15); }
-    .status-bar.error { background: rgba(255,68,102,0.07); color: var(--danger); border: 1px solid rgba(255,68,102,0.15); }
-    .status-bar.success { background: rgba(0,255,204,0.1); color: var(--accent); border: 1px solid rgba(0,255,204,0.25); }
-
-    .dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
-    }
-
-    .dot.pulse {
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.7); }
-    }
-
-    /* Video */
-    #remoteVideo {
-      width: 100%;
-      border-radius: var(--radius);
-      background: #000;
-      display: none;
-      border: 1px solid var(--border);
-      margin-top: 16px;
-      max-height: 360px;
-      object-fit: contain;
-    }
-
-    #remoteVideo.active { display: block; }
-
-    /* Video container overlay */
-    .video-wrap {
-      position: relative;
-    }
-
-    .video-label {
-      position: absolute;
-      top: 24px; left: 24px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      color: var(--accent);
-      background: rgba(0,0,0,0.7);
-      padding: 4px 10px;
-      border-radius: 100px;
-      display: none;
-    }
-
-    #remoteVideo.active + .video-label { display: block; }
-
-    /* Divider */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 16px 0;
-      color: var(--muted);
-      font-size: 11px;
-      font-family: 'JetBrains Mono', monospace;
-    }
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-
-    /* Hidden */
-    .hidden { display: none !important; }
-
-    /* Sections */
-    #senderSection, #receiverSection { width: 100%; max-width: 560px; }
-
-    /* How it works */
-    .how-it-works {
-      width: 100%;
-      max-width: 560px;
-      margin-top: 8px;
-    }
-
-    .how-it-works details {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-
-    .how-it-works summary {
-      padding: 14px 20px;
-      cursor: pointer;
-      font-size: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--muted);
-      list-style: none;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .how-it-works summary::after { content: '▾'; }
-
-    .flow {
-      padding: 0 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .flow-step {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-size: 12px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--muted);
-    }
-
-    .flow-step .num {
-      width: 22px; height: 22px;
-      border-radius: 50%;
-      background: var(--border);
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    /* back btn */
-    .back-btn {
-      background: none;
-      border: none;
-      color: var(--muted);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      cursor: pointer;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 0;
-      width: fit-content;
-    }
-    .back-btn:hover { color: var(--text); }
-  </style>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header>
-  <div class="badge">WebRTC · P2P · No Server</div>
-  <h1>Screen<span>Share</span></h1>
-  <p>browser → browser · powered by peerjs</p>
-</header>
+    <header>
+        <div class="badge">
+            WebRTC · P2P · FILE TRANSFER
+        </div>
 
-<!-- Step indicators -->
-<div class="steps">
-  <div class="step active" id="step1"></div>
-  <div class="step" id="step2"></div>
-  <div class="step" id="step3"></div>
-</div>
+        <h1>
+            P2P<span>Transfer</span>
+        </h1>
 
-<!-- Mode selector -->
-<div id="modeSelect" style="width:100%;max-width:560px;">
-  <div class="card">
-    <div class="card-title">What is this device?</div>
-    <div class="mode-grid">
-      <button class="mode-btn" onclick="selectMode('sender')">
-        <span class="icon">📱</span>
-        <span>Sender</span>
-        <span class="desc">Share my screen<br>(iPhone / any)</span>
-      </button>
-      <button class="mode-btn" onclick="selectMode('receiver')">
-        <span class="icon">💻</span>
-        <span>Receiver</span>
-        <span class="desc">View incoming<br>screen share</span>
-      </button>
-    </div>
-  </div>
+        <p>
+            browser → browser · direct data channel
+        </p>
+    </header>
 
-  <div class="how-it-works">
-    <details>
-      <summary>How does this work?</summary>
-      <div class="flow">
-        <div class="flow-step"><span class="num">1</span> Receiver opens page → gets a unique Peer ID</div>
-        <div class="flow-step"><span class="num">2</span> Receiver shares that ID with the Sender</div>
-        <div class="flow-step"><span class="num">3</span> Sender enters the ID → starts screen share</div>
-        <div class="flow-step"><span class="num">4</span> WebRTC P2P connection established 🎉</div>
-        <div class="flow-step"><span class="num">5</span> Video streams directly — no middleman server</div>
-      </div>
-    </details>
-  </div>
-</div>
 
-<!-- SENDER section -->
-<div id="senderSection" class="hidden">
-  <button class="back-btn" onclick="goBack()">← back</button>
+    <!-- STEP INDICATOR -->
 
-  <div class="card">
-    <div class="card-title">📱 Sender — Step 1</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Enter the Peer ID shown on the <strong style="color:var(--text)">Receiver's</strong> screen, then start sharing.</p>
-
-    <label style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);display:block;margin-bottom:6px;">RECEIVER'S PEER ID</label>
-    <div class="input-wrap">
-      <input type="text" id="remoteIdInput" placeholder="paste-peer-id-here" />
+    <div class="steps">
+        <div class="step active" id="step1"></div>
+        <div class="step" id="step2"></div>
+        <div class="step" id="step3"></div>
     </div>
 
-    <div id="senderStatus" class="status-bar info hidden">
-      <span class="dot pulse"></span>
-      <span id="senderStatusText">Connecting...</span>
+
+    <!-- MODE SELECT -->
+
+    <div id="modeSelect">
+
+        <div class="card">
+
+            <div class="card-title">
+                Select device mode
+            </div>
+
+            <div class="mode-grid">
+
+                <button
+                    class="mode-btn"
+                    onclick="selectMode('sender')"
+                >
+                    <span class="icon">↑</span>
+
+                    <span>
+                        Sender
+                    </span>
+
+                    <span class="desc">
+                        Send a file
+                        <br>
+                        to another device
+                    </span>
+                </button>
+
+
+                <button
+                    class="mode-btn"
+                    onclick="selectMode('receiver')"
+                >
+                    <span class="icon">↓</span>
+
+                    <span>
+                        Receiver
+                    </span>
+
+                    <span class="desc">
+                        Receive a file
+                        <br>
+                        from another device
+                    </span>
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <div class="how-it-works">
+
+            <details>
+
+                <summary>
+                    How does this work?
+                </summary>
+
+                <div class="flow">
+
+                    <div class="flow-step">
+                        <span class="num">1</span>
+                        Receiver opens the page
+                    </div>
+
+                    <div class="flow-step">
+                        <span class="num">2</span>
+                        Receiver gets a Peer ID
+                    </div>
+
+                    <div class="flow-step">
+                        <span class="num">3</span>
+                        Sender enters the Peer ID
+                    </div>
+
+                    <div class="flow-step">
+                        <span class="num">4</span>
+                        WebRTC data connection is established
+                    </div>
+
+                    <div class="flow-step">
+                        <span class="num">5</span>
+                        File is transferred directly
+                    </div>
+
+                </div>
+
+            </details>
+
+        </div>
+
     </div>
 
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-      <button class="btn btn-primary" id="startShareBtn" onclick="startSharing()">
-        🖥️ &nbsp;Start Screen Share
-      </button>
-      <button class="btn btn-danger hidden" id="stopShareBtn" onclick="stopSharing()">
-        ⏹ &nbsp;Stop Sharing
-      </button>
+
+    <!-- SENDER -->
+
+    <div
+        id="senderSection"
+        class="hidden"
+    >
+
+        <button
+            class="back-btn"
+            onclick="goBack()"
+        >
+            ← back
+        </button>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Sender
+            </div>
+
+            <p class="description">
+                Enter the Peer ID shown on the
+                <strong>Receiver's</strong>
+                device.
+            </p>
+
+
+            <label class="input-label">
+                RECEIVER PEER ID
+            </label>
+
+            <div class="input-wrap">
+
+                <input
+                    type="text"
+                    id="remoteIdInput"
+                    placeholder="paste-peer-id-here"
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div
+                id="senderStatus"
+                class="status-bar info hidden"
+            >
+
+                <span class="dot pulse"></span>
+
+                <span id="senderStatusText">
+                    Waiting...
+                </span>
+
+            </div>
+
+
+            <!-- FILE INPUT -->
+
+            <div class="file-section">
+
+                <label class="input-label">
+                    SELECT FILE
+                </label>
+
+                <input
+                    type="file"
+                    id="fileInput"
+                >
+
+                <div
+                    id="selectedFileInfo"
+                    class="selected-file"
+                ></div>
+
+
+                <!-- PROGRESS -->
+
+                <div
+                    id="transferProgressContainer"
+                    class="progress-container"
+                >
+
+                    <div class="progress-header">
+
+                        <span>
+                            TRANSFER
+                        </span>
+
+                        <span id="transferPercent">
+                            0%
+                        </span>
+
+                    </div>
+
+                    <div class="progress-track">
+
+                        <div
+                            id="transferProgress"
+                            class="progress-bar"
+                        ></div>
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="sendFileBtn"
+                    class="btn btn-primary"
+                    disabled
+                >
+                    Send File
+                </button>
+
+            </div>
+
+        </div>
+
     </div>
-  </div>
 
-  <div class="card" style="background:rgba(0,255,204,0.03);border-color:rgba(0,255,204,0.1)">
-    <div class="card-title">💡 iPhone Safari tip</div>
-    <p style="font-size:13px;color:var(--muted);line-height:1.6;">When prompted, select <strong style="color:var(--text)">"Share Tab"</strong>. iOS only allows sharing the current browser tab, not the full screen. For full screen sharing, use a desktop browser.</p>
-  </div>
-</div>
 
-<!-- RECEIVER section -->
-<div id="receiverSection" class="hidden">
-  <button class="back-btn" onclick="goBack()">← back</button>
+    <!-- RECEIVER -->
 
-  <div class="card">
-    <div class="card-title">💻 Receiver — Step 1</div>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Your Peer ID is ready. Share it with the <strong style="color:var(--text)">Sender</strong>.</p>
+    <div
+        id="receiverSection"
+        class="hidden"
+    >
 
-    <label style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--muted);display:block;margin-bottom:6px;">YOUR PEER ID</label>
-    <div class="id-display" id="myIdDisplay">
-      <code id="myPeerId">generating...</code>
-      <button class="copy-btn" onclick="copyId()" title="Copy ID">📋</button>
+        <button
+            class="back-btn"
+            onclick="goBack()"
+        >
+            ← back
+        </button>
+
+
+        <div class="card">
+
+            <div class="card-title">
+                Receiver
+            </div>
+
+            <p class="description">
+                Share this Peer ID with the
+                <strong>Sender</strong>.
+            </p>
+
+
+            <label class="input-label">
+                YOUR PEER ID
+            </label>
+
+
+            <div class="id-display">
+
+                <code id="myPeerId">
+                    generating...
+                </code>
+
+                <button
+                    class="copy-btn"
+                    onclick="copyId()"
+                    title="Copy Peer ID"
+                >
+                    📋
+                </button>
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div
+                id="receiverStatus"
+                class="status-bar info"
+            >
+
+                <span class="dot pulse"></span>
+
+                <span id="receiverStatusText">
+                    Waiting for sender...
+                </span>
+
+            </div>
+
+
+            <!-- RECEIVING PROGRESS WILL BE CREATED BY JS -->
+
+        </div>
+
     </div>
 
-    <div id="receiverStatus" class="status-bar info">
-      <span class="dot pulse"></span>
-      <span id="receiverStatusText">Waiting for sender to connect...</span>
-    </div>
-  </div>
 
-  <div class="card" id="videoCard">
-    <div class="card-title">📺 Incoming Stream</div>
-    <div class="video-wrap">
-      <video id="remoteVideo" autoplay playsinline controls></video>
-      <div class="video-label">● LIVE</div>
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:12px;font-family:'JetBrains Mono',monospace;text-align:center;">Waiting for stream...</p>
-  </div>
-</div>
+    <script src="script.js" defer></script>
 
-<script>
-  let peer = null;
-  let localStream = null;
-  let currentCall = null;
-  let mode = null;
-
-  function selectMode(m) {
-    mode = m;
-    document.getElementById('modeSelect').classList.add('hidden');
-    document.getElementById('step1').classList.remove('active');
-    document.getElementById('step1').classList.add('done');
-    document.getElementById('step2').classList.add('active');
-
-    if (m === 'sender') {
-      document.getElementById('senderSection').classList.remove('hidden');
-    } else {
-      document.getElementById('receiverSection').classList.remove('hidden');
-      initReceiver();
-    }
-  }
-
-  function goBack() {
-    if (localStream) stopSharing();
-    if (peer) { peer.destroy(); peer = null; }
-    document.getElementById('senderSection').classList.add('hidden');
-    document.getElementById('receiverSection').classList.add('hidden');
-    document.getElementById('modeSelect').classList.remove('hidden');
-    document.getElementById('step1').classList.remove('done');
-    document.getElementById('step1').classList.add('active');
-    document.getElementById('step2').classList.remove('active');
-    document.getElementById('step2').classList.remove('done');
-    document.getElementById('step3').classList.remove('active');
-    document.getElementById('myPeerId').textContent = 'generating...';
-    document.getElementById('remoteVideo').classList.remove('active');
-    setStatus('receiver', 'info', 'Waiting for sender to connect...');
-  }
-
-  function initReceiver() {
-    peer = new Peer(undefined, { debug: 2 });
-
-    peer.on('open', (id) => {
-      document.getElementById('myPeerId').textContent = id;
-      setStatus('receiver', 'info', 'Waiting for sender to connect...');
-    });
-
-    peer.on('call', (call) => {
-      currentCall = call;
-      setStatus('receiver', 'success', 'Sender connected! Stream incoming...');
-      document.getElementById('step2').classList.remove('active');
-      document.getElementById('step2').classList.add('done');
-      document.getElementById('step3').classList.add('active');
-
-      call.answer(); // no local stream needed on receiver
-
-      call.on('stream', (remoteStream) => {
-        const video = document.getElementById('remoteVideo');
-        video.srcObject = remoteStream;
-        // iOS Safari can keep remote video paused unless play() is called explicitly.
-        video.muted = true;
-        video.playsInline = true;
-        video.classList.add('active');
-        document.querySelector('#videoCard p').textContent = 'Stream active ✓';
-        setStatus('receiver', 'success', '● Live — P2P stream active');
-        video.play().catch(() => {
-          document.querySelector('#videoCard p').textContent = 'Tap play if video is paused by browser.';
-        });
-      });
-
-      call.on('close', () => {
-        setStatus('receiver', 'error', 'Stream ended by sender.');
-        document.getElementById('remoteVideo').classList.remove('active');
-        document.querySelector('#videoCard p').textContent = 'Stream ended.';
-      });
-
-      call.on('error', (err) => {
-        setStatus('receiver', 'error', 'Stream error: ' + err.message);
-      });
-    });
-
-    peer.on('error', (err) => {
-      setStatus('receiver', 'error', 'Peer error: ' + err.type);
-    });
-  }
-
-  function isIOSSafari() {
-    const ua = navigator.userAgent || '';
-    const iOS = /iPhone|iPad|iPod/i.test(ua);
-    const safari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
-    return iOS && safari;
-  }
-
-  async function getShareStream() {
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.getDisplayMedia === 'function') {
-      return navigator.mediaDevices.getDisplayMedia({
-        // Slightly lower default capture load helps cross-device decoding stability.
-        video: { frameRate: 15, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false
-      });
-    }
-    // iPhone Safari commonly does not support tab/screen capture from web pages.
-    if (isIOSSafari()) {
-      throw new Error('This Safari on iPhone does not support web screen sharing. Use desktop Chrome/Edge/Safari as Sender.');
-    }
-    throw new Error('Screen sharing is not supported in this browser. Try latest Chrome, Edge, or Safari on desktop.');
-  }
-
-  async function startSharing() {
-    const remoteId = document.getElementById('remoteIdInput').value.trim();
-    if (!remoteId) {
-      alert('Please enter the Receiver\'s Peer ID first.');
-      return;
-    }
-
-    setStatus('sender', 'info', 'Requesting screen access...');
-    document.getElementById('senderStatus').classList.remove('hidden');
-
-    try {
-      localStream = await getShareStream();
-    } catch (e) {
-      setStatus('sender', 'error', 'Screen access denied: ' + e.message);
-      return;
-    }
-
-    setStatus('sender', 'info', 'Connecting to receiver...');
-
-    peer = new Peer(undefined, { debug: 2 });
-
-    peer.on('open', () => {
-      const call = peer.call(remoteId, localStream);
-      currentCall = call;
-      const vTrack = localStream.getVideoTracks()[0];
-      if (vTrack) {
-        vTrack.onended = () => stopSharing();
-        vTrack.onmute = () => setStatus('sender', 'error', 'Video track muted by browser/device.');
-        vTrack.onunmute = () => setStatus('sender', 'success', '● Live — Streaming to receiver');
-      }
-
-      document.getElementById('startShareBtn').classList.add('hidden');
-      document.getElementById('stopShareBtn').classList.remove('hidden');
-      document.getElementById('step2').classList.remove('active');
-      document.getElementById('step2').classList.add('done');
-      document.getElementById('step3').classList.add('active');
-
-      call.on('close', () => {
-        setStatus('sender', 'info', 'Connection closed.');
-        stopSharing();
-      });
-
-      call.on('error', (err) => {
-        setStatus('sender', 'error', 'Call error: ' + err.message);
-      });
-
-      setStatus('sender', 'success', '● Live — Streaming to receiver');
-    });
-
-    peer.on('error', (err) => {
-      setStatus('sender', 'error', 'Connection failed: ' + err.type + '. Check the Peer ID.');
-    });
-  }
-
-  function stopSharing() {
-    if (localStream) {
-      localStream.getTracks().forEach(t => t.stop());
-      localStream = null;
-    }
-    if (currentCall) { currentCall.close(); currentCall = null; }
-    if (peer) { peer.destroy(); peer = null; }
-
-    document.getElementById('startShareBtn').classList.remove('hidden');
-    document.getElementById('stopShareBtn').classList.add('hidden');
-    setStatus('sender', 'info', 'Sharing stopped. Ready to share again.');
-    document.getElementById('step3').classList.remove('active');
-    document.getElementById('step2').classList.remove('done');
-    document.getElementById('step2').classList.add('active');
-  }
-
-  function setStatus(section, type, text) {
-    const bar = document.getElementById(section + 'Status');
-    const textEl = document.getElementById(section + 'StatusText');
-    bar.className = 'status-bar ' + type;
-    textEl.textContent = text;
-    const dot = bar.querySelector('.dot');
-    dot.className = 'dot' + (type === 'info' ? ' pulse' : '');
-  }
-
-  function copyId() {
-    const id = document.getElementById('myPeerId').textContent;
-    navigator.clipboard.writeText(id).then(() => {
-      const btn = document.querySelector('.copy-btn');
-      btn.textContent = '✅';
-      setTimeout(() => btn.textContent = '📋', 2000);
-    });
-  }
-</script>
 </body>
 </html>
