@@ -2,26 +2,16 @@
    ELEMENTS
 ========================================================= */
 
-const showQrBtn =
-    document.getElementById("show-qr-btn");
+const showQrBtn = document.getElementById("show-qr-btn");
+const scanQrBtn = document.getElementById("scan-qr-btn");
 
-const scanQrBtn =
-    document.getElementById("scan-qr-btn");
+const qrSection = document.getElementById("qr-section");
+const scannerSection = document.getElementById("scanner-section");
 
-const qrSection =
-    document.getElementById("qr-section");
+const peerIdElement = document.getElementById("peer-id");
 
-const scannerSection =
-    document.getElementById("scanner-section");
-
-const peerIdElement =
-    document.getElementById("peer-id");
-
-const statusText =
-    document.getElementById("status-text");
-
-const statusDot =
-    document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
+const statusDot = document.getElementById("status-dot");
 
 const scannerMessage =
     document.getElementById("scanner-message");
@@ -77,39 +67,50 @@ let connection = null;
 
 let qrScanner = null;
 let scannerRunning = false;
+let connectingToPeer = false;
 
 
 /* =========================================================
    FILE VARIABLES
 ========================================================= */
 
-let selectedFile = null;
+let selectedFiles = [];
+
+let sendingFiles = false;
 
 let receivingFile = null;
-
 let receivedChunks = [];
-
 let receivedBytes = 0;
 
-let receivedObjectUrl = null;
+let receivedFileNumber = 0;
+let receivedTotalFiles = 0;
 
 
-/*
-    64 KB chunks.
+/* =========================================================
+   DOWNLOAD URLS
+========================================================= */
 
-    The receiver acknowledges every chunk
-    before the sender sends the next one.
-*/
+let receivedObjectUrls = [];
+
+
+/* =========================================================
+   TRANSFER SETTINGS
+========================================================= */
 
 const CHUNK_SIZE = 64 * 1024;
 
 
-/*
-    Used to prevent multiple QR callbacks.
-*/
+/* =========================================================
+   ACK SYSTEM
+========================================================= */
 
-let connectingToPeer = false;
+let chunkAckResolver = null;
+let chunkAckRejecter = null;
+let chunkAckTimeout = null;
 
+let fileAckResolver = null;
+let fileAckRejecter = null;
+let fileAckTimeout = null;
 
 
 /* =========================================================
@@ -127,19 +128,11 @@ function setStatus(text, connected = false) {
     }
 
     if (connected) {
-
-        statusDot.classList.add(
-            "connected"
-        );
-
+        statusDot.classList.add("connected");
     } else {
-
-        statusDot.classList.remove(
-            "connected"
-        );
+        statusDot.classList.remove("connected");
     }
 }
-
 
 
 /* =========================================================
@@ -150,35 +143,32 @@ function createPeer() {
 
     setStatus("Connecting...");
 
+    if (typeof Peer === "undefined") {
 
-    /*
-        Create a PeerJS peer.
+        console.error(
+            "PeerJS library is not loaded."
+        );
 
-        PeerJS automatically generates
-        the Peer ID.
-    */
+        setStatus("PeerJS unavailable");
+
+        return;
+    }
+
 
     peer = new Peer();
 
 
     /* =====================================================
-       PEER OPEN
+       PEER READY
     ===================================================== */
 
     peer.on("open", (id) => {
 
-        console.log(
-            "My Peer ID:",
-            id
-        );
+        console.log("My Peer ID:", id);
 
-
-        peerIdElement.textContent =
-            id;
-
+        peerIdElement.textContent = id;
 
         setStatus("Ready");
-
 
         generateQRCode(id);
     });
@@ -191,10 +181,9 @@ function createPeer() {
     peer.on("connection", (conn) => {
 
         console.log(
-            "Incoming connection from:",
+            "Incoming connection:",
             conn.peer
         );
-
 
         setupConnection(conn);
     });
@@ -211,16 +200,11 @@ function createPeer() {
             error
         );
 
-
-        setStatus(
-            "Connection error"
-        );
-
+        setStatus("Connection error");
 
         if (transferStatus) {
-
             transferStatus.textContent =
-                "PeerJS connection error.";
+                `Connection error: ${error.type || "unknown"}`;
         }
     });
 
@@ -235,7 +219,6 @@ function createPeer() {
             "Disconnected from PeerServer"
         );
 
-
         setStatus(
             "Signaling disconnected"
         );
@@ -248,19 +231,15 @@ function createPeer() {
 
     peer.on("close", () => {
 
-        console.log(
-            "Peer closed"
-        );
-
+        console.log("Peer closed");
 
         setStatus("Closed");
     });
 }
 
 
-
 /* =========================================================
-   GENERATE QR CODE
+   GENERATE QR
 ========================================================= */
 
 function generateQRCode(peerId) {
@@ -268,43 +247,36 @@ function generateQRCode(peerId) {
     const qrContainer =
         document.getElementById("qrcode");
 
-
     if (!qrContainer) {
         return;
     }
 
-
     qrContainer.innerHTML = "";
 
 
-    if (
-        typeof QRCode ===
-        "undefined"
-    ) {
+    if (typeof QRCode === "undefined") {
 
         console.error(
-            "QRCode library not loaded."
+            "QRCode library is not loaded."
         );
 
         return;
     }
 
 
-    new QRCode(
-        qrContainer,
-        {
-            text: peerId,
+    new QRCode(qrContainer, {
 
-            width: 220,
-            height: 220,
+        text: peerId,
 
-            colorDark: "#111111",
-            colorLight: "#ffffff",
+        width: 220,
+        height: 220,
 
-            correctLevel:
-                QRCode.CorrectLevel.M
-        }
-    );
+        colorDark: "#111111",
+        colorLight: "#ffffff",
+
+        correctLevel:
+            QRCode.CorrectLevel.M
+    });
 
 
     console.log(
@@ -314,16 +286,19 @@ function generateQRCode(peerId) {
 }
 
 
-
 /* =========================================================
-   SETUP PEER CONNECTION
+   SETUP CONNECTION
 ========================================================= */
 
 function setupConnection(conn) {
 
+    if (!conn) {
+        return;
+    }
+
+
     /*
-        If another connection already exists,
-        close it before replacing it.
+        Close an old connection.
     */
 
     if (
@@ -353,7 +328,6 @@ function setupConnection(conn) {
             "P2P connection established"
         );
 
-
         console.log(
             "Connected peer:",
             conn.peer
@@ -382,7 +356,7 @@ function setupConnection(conn) {
 
 
         /*
-            Enable file-transfer UI.
+            Show file-transfer section.
         */
 
         if (fileTransfer) {
@@ -396,19 +370,16 @@ function setupConnection(conn) {
         if (transferStatus) {
 
             transferStatus.textContent =
-                "Connected. Select a file.";
+                "Connected. Select files.";
         }
 
 
-        if (sendFileBtn) {
-
-            sendFileBtn.disabled = true;
-        }
+        updateSendButton();
     });
 
 
     /* =====================================================
-       DATA RECEIVED
+       DATA
     ===================================================== */
 
     conn.on("data", (data) => {
@@ -418,7 +389,7 @@ function setupConnection(conn) {
 
 
     /* =====================================================
-       CONNECTION CLOSED
+       CLOSE
     ===================================================== */
 
     conn.on("close", () => {
@@ -450,11 +421,17 @@ function setupConnection(conn) {
 
 
         connection = null;
+
+        selectedFiles = [];
+
+        sendingFiles = false;
+
+        updateSendButton();
     });
 
 
     /* =====================================================
-       CONNECTION ERROR
+       ERROR
     ===================================================== */
 
     conn.on("error", (error) => {
@@ -468,11 +445,29 @@ function setupConnection(conn) {
         if (transferStatus) {
 
             transferStatus.textContent =
-                "Connection error.";
+                "Data connection error.";
         }
     });
 }
 
+
+/* =========================================================
+   UPDATE SEND BUTTON
+========================================================= */
+
+function updateSendButton() {
+
+    if (!sendFileBtn) {
+        return;
+    }
+
+
+    sendFileBtn.disabled =
+        sendingFiles ||
+        selectedFiles.length === 0 ||
+        !connection ||
+        !connection.open;
+}
 
 
 /* =========================================================
@@ -487,7 +482,6 @@ showQrBtn.addEventListener(
             "active"
         );
 
-
         scanQrBtn.classList.remove(
             "active"
         );
@@ -497,7 +491,6 @@ showQrBtn.addEventListener(
             "hidden"
         );
 
-
         scannerSection.classList.add(
             "hidden"
         );
@@ -506,7 +499,6 @@ showQrBtn.addEventListener(
         await stopScanner();
     }
 );
-
 
 
 /* =========================================================
@@ -521,7 +513,6 @@ scanQrBtn.addEventListener(
             "active"
         );
 
-
         scanQrBtn.classList.add(
             "active"
         );
@@ -530,7 +521,6 @@ scanQrBtn.addEventListener(
         qrSection.classList.add(
             "hidden"
         );
-
 
         scannerSection.classList.remove(
             "hidden"
@@ -542,9 +532,8 @@ scanQrBtn.addEventListener(
 );
 
 
-
 /* =========================================================
-   START QR SCANNER
+   START SCANNER
 ========================================================= */
 
 async function startScanner() {
@@ -561,10 +550,6 @@ async function startScanner() {
 
         scannerMessage.textContent =
             "QR scanner library not loaded.";
-
-        console.error(
-            "Html5Qrcode not found."
-        );
 
         return;
     }
@@ -597,7 +582,7 @@ async function startScanner() {
 
 
         /*
-            Use the rear camera when available.
+            Prefer rear camera.
         */
 
         let cameraId =
@@ -646,7 +631,8 @@ async function startScanner() {
 
             () => {
                 /*
-                    Ignore normal scan failures.
+                    Ignore normal
+                    scanning failures.
                 */
             }
         );
@@ -674,21 +660,11 @@ async function startScanner() {
 }
 
 
-
 /* =========================================================
-   QR CODE DETECTED
+   QR CODE FOUND
 ========================================================= */
 
-async function handleQRCode(
-    decodedText
-) {
-
-    /*
-        QR scanner can call this function
-        multiple times.
-
-        Prevent duplicate connections.
-    */
+async function handleQRCode(decodedText) {
 
     if (connectingToPeer) {
         return;
@@ -762,15 +738,13 @@ async function handleQRCode(
         scannerMessage.textContent =
             "Unable to connect.";
 
-
         connectingToPeer = false;
     }
 }
 
 
-
 /* =========================================================
-   STOP QR SCANNER
+   STOP SCANNER
 ========================================================= */
 
 async function stopScanner() {
@@ -807,9 +781,8 @@ async function stopScanner() {
 }
 
 
-
 /* =========================================================
-   FILE SELECTED
+   FILE SELECTION
 ========================================================= */
 
 if (fileInput) {
@@ -818,76 +791,981 @@ if (fileInput) {
         "change",
         () => {
 
-            const file =
-                fileInput.files[0];
+            selectedFiles =
+                Array.from(
+                    fileInput.files
+                );
 
 
-            if (!file) {
+            if (
+                selectedFiles.length === 0
+            ) {
 
-                selectedFile = null;
+                fileName.textContent =
+                    "No files selected";
 
-                if (sendFileBtn) {
-                    sendFileBtn.disabled =
-                        true;
-                }
+                fileSize.textContent = "";
+
+                updateSendButton();
 
                 return;
             }
 
 
-            selectedFile =
-                file;
+            const count =
+                selectedFiles.length;
 
 
-            if (fileName) {
-
-                fileName.textContent =
-                    file.name;
-            }
-
-
-            if (fileSize) {
-
-                fileSize.textContent =
-                    formatFileSize(
-                        file.size
-                    );
-            }
+            const totalSize =
+                selectedFiles.reduce(
+                    (total, file) =>
+                        total + file.size,
+                    0
+                );
 
 
             /*
-                Enable only when the
-                PeerJS connection is open.
+                Display number of files.
             */
 
-            if (sendFileBtn) {
-
-                sendFileBtn.disabled =
-                    !connection ||
-                    !connection.open;
-            }
+            fileName.textContent =
+                `${count} file${count > 1 ? "s" : ""} selected`;
 
 
-            if (transferStatus) {
+            /*
+                Display total size.
+            */
 
-                transferStatus.textContent =
-                    "File ready to send.";
-            }
+            fileSize.textContent =
+                formatFileSize(
+                    totalSize
+                );
 
 
-            if (transferProgress) {
+            /*
+                Reset progress.
+            */
 
-                transferProgress.style.width =
-                    "0%";
-            }
+            transferProgress.style.width =
+                "0%";
+
+
+            transferStatus.textContent =
+                `${count} file${count > 1 ? "s" : ""} ready to send.`;
+
+
+            updateSendButton();
         }
     );
 }
 
 
+/* =========================================================
+   SEND FILE BUTTON
+========================================================= */
+
+if (sendFileBtn) {
+
+    sendFileBtn.addEventListener(
+        "click",
+        sendMultipleFiles
+    );
+}
+
 
 /* =========================================================
-   FILE SIZE
+   SEND MULTIPLE FILES
+========================================================= */
+
+async function sendMultipleFiles() {
+
+    if (sendingFiles) {
+        return;
+    }
+
+
+    if (
+        !connection ||
+        !connection.open
+    ) {
+
+        transferStatus.textContent =
+            "No peer connection.";
+
+        return;
+    }
+
+
+    if (
+        selectedFiles.length === 0
+    ) {
+
+        transferStatus.textContent =
+            "Select files first.";
+
+        return;
+    }
+
+
+    sendingFiles = true;
+
+    updateSendButton();
+
+
+    const totalFiles =
+        selectedFiles.length;
+
+
+    try {
+
+        /*
+            Send each file sequentially.
+        */
+
+        for (
+            let i = 0;
+            i < totalFiles;
+            i++
+        ) {
+
+            const file =
+                selectedFiles[i];
+
+
+            await sendSingleFile(
+                file,
+                i + 1,
+                totalFiles
+            );
+        }
+
+
+        transferProgress.style.width =
+            "100%";
+
+
+        transferStatus.textContent =
+            `All ${totalFiles} files sent successfully.`;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Multiple file transfer failed:",
+            error
+        );
+
+
+        transferStatus.textContent =
+            "File transfer failed.";
+    }
+
+
+    sendingFiles = false;
+
+    updateSendButton();
+}
+
+
+/* =========================================================
+   SEND SINGLE FILE
+========================================================= */
+
+async function sendSingleFile(
+    file,
+    fileNumber,
+    totalFiles
+) {
+
+    console.log(
+        `Sending ${fileNumber}/${totalFiles}:`,
+        file.name
+    );
+
+
+    /*
+        Tell receiver about the file.
+    */
+
+    connection.send({
+
+        type: "file-start",
+
+        fileNumber:
+            fileNumber,
+
+        totalFiles:
+            totalFiles,
+
+        name:
+            file.name,
+
+        size:
+            file.size,
+
+        mime:
+            file.type ||
+            "application/octet-stream"
+    });
+
+
+    /*
+        Empty file.
+    */
+
+    if (file.size === 0) {
+
+        connection.send({
+            type: "file-end"
+        });
+
+
+        await waitForFileAck();
+
+        return;
+    }
+
+
+    let offset = 0;
+
+
+    /*
+        Send chunks.
+    */
+
+    while (
+        offset <
+        file.size
+    ) {
+
+        if (
+            !connection ||
+            !connection.open
+        ) {
+
+            throw new Error(
+                "Connection lost."
+            );
+        }
+
+
+        const chunk =
+            file.slice(
+                offset,
+                offset + CHUNK_SIZE
+            );
+
+
+        const buffer =
+            await chunk.arrayBuffer();
+
+
+        connection.send({
+
+            type: "file-chunk",
+
+            data: buffer
+        });
+
+
+        offset +=
+            buffer.byteLength;
+
+
+        const progress =
+            (
+                offset /
+                file.size
+            ) * 100;
+
+
+        transferProgress.style.width =
+            `${Math.min(
+                progress,
+                100
+            )}%`;
+
+
+        transferStatus.textContent =
+            `Sending ${fileNumber}/${totalFiles}: ${file.name} — ${Math.round(progress)}%`;
+
+
+        /*
+            Wait for receiver.
+        */
+
+        await waitForChunkAck();
+    }
+
+
+    /*
+        Tell receiver that the
+        current file is complete.
+    */
+
+    connection.send({
+
+        type: "file-end"
+    });
+
+
+    /*
+        Wait for receiver to rebuild
+        the file.
+    */
+
+    await waitForFileAck();
+
+
+    console.log(
+        `Finished: ${file.name}`
+    );
+}
+
+
+/* =========================================================
+   WAIT FOR CHUNK ACK
+========================================================= */
+
+function waitForChunkAck() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            clearTimeout(
+                chunkAckTimeout
+            );
+
+
+            chunkAckResolver =
+                resolve;
+
+            chunkAckRejecter =
+                reject;
+
+
+            chunkAckTimeout =
+                setTimeout(
+                    () => {
+
+                        chunkAckResolver =
+                            null;
+
+                        chunkAckRejecter =
+                            null;
+
+                        reject(
+                            new Error(
+                                "Chunk acknowledgement timeout."
+                            )
+                        );
+
+                    },
+                    30000
+                );
+        }
+    );
+}
+
+
+/* =========================================================
+   WAIT FOR FILE ACK
+========================================================= */
+
+function waitForFileAck() {
+
+    return new Promise(
+        (resolve, reject) => {
+
+            clearTimeout(
+                fileAckTimeout
+            );
+
+
+            fileAckResolver =
+                resolve;
+
+            fileAckRejecter =
+                reject;
+
+
+            fileAckTimeout =
+                setTimeout(
+                    () => {
+
+                        fileAckResolver =
+                            null;
+
+                        fileAckRejecter =
+                            null;
+
+                        reject(
+                            new Error(
+                                "File acknowledgement timeout."
+                            )
+                        );
+
+                    },
+                    30000
+                );
+        }
+    );
+}
+
+
+/* =========================================================
+   HANDLE INCOMING DATA
+========================================================= */
+
+function handleIncomingData(data) {
+
+    if (!data) {
+        return;
+    }
+
+
+    /*
+        FILE START
+    */
+
+    if (
+        data.type === "file-start"
+    ) {
+
+        startReceivingFile(
+            data
+        );
+
+        return;
+    }
+
+
+    /*
+        FILE CHUNK
+    */
+
+    if (
+        data.type === "file-chunk"
+    ) {
+
+        receiveFileChunk(
+            data.data
+        );
+
+        return;
+    }
+
+
+    /*
+        FILE END
+    */
+
+    if (
+        data.type === "file-end"
+    ) {
+
+        finishReceivingFile();
+
+        return;
+    }
+
+
+    /*
+        CHUNK ACK
+    */
+
+    if (
+        data.type === "chunk-ack"
+    ) {
+
+        resolveChunkAck();
+
+        return;
+    }
+
+
+    /*
+        FILE ACK
+    */
+
+    if (
+        data.type === "file-ack"
+    ) {
+
+        resolveFileAck();
+
+        return;
+    }
+
+
+    console.log(
+        "Unknown data:",
+        data
+    );
+}
+
+
+/* =========================================================
+   RESOLVE CHUNK ACK
+========================================================= */
+
+function resolveChunkAck() {
+
+    if (!chunkAckResolver) {
+        return;
+    }
+
+
+    clearTimeout(
+        chunkAckTimeout
+    );
+
+
+    const resolve =
+        chunkAckResolver;
+
+
+    chunkAckResolver = null;
+    chunkAckRejecter = null;
+
+
+    resolve();
+}
+
+
+/* =========================================================
+   RESOLVE FILE ACK
+========================================================= */
+
+function resolveFileAck() {
+
+    if (!fileAckResolver) {
+        return;
+    }
+
+
+    clearTimeout(
+        fileAckTimeout
+    );
+
+
+    const resolve =
+        fileAckResolver;
+
+
+    fileAckResolver = null;
+    fileAckRejecter = null;
+
+
+    resolve();
+}
+
+
+/* =========================================================
+   START RECEIVING FILE
+========================================================= */
+
+function startReceivingFile(data) {
+
+    console.log(
+        `Receiving ${data.fileNumber}/${data.totalFiles}:`,
+        data.name
+    );
+
+
+    receivingFile = {
+
+        name:
+            data.name,
+
+        size:
+            Number(data.size),
+
+        mime:
+            data.mime ||
+            "application/octet-stream"
+    };
+
+
+    receivedFileNumber =
+        Number(data.fileNumber);
+
+    receivedTotalFiles =
+        Number(data.totalFiles);
+
+
+    receivedChunks = [];
+
+    receivedBytes = 0;
+
+
+    /*
+        Hide previous single-file
+        result while receiving.
+    */
+
+    if (receivedFile) {
+
+        receivedFile.classList.add(
+            "hidden"
+        );
+    }
+
+
+    transferProgress.style.width =
+        "0%";
+
+
+    transferStatus.textContent =
+        `Receiving ${receivedFileNumber}/${receivedTotalFiles}: ${data.name}`;
+}
+
+
+/* =========================================================
+   RECEIVE FILE CHUNK
+========================================================= */
+
+function receiveFileChunk(data) {
+
+    if (!receivingFile) {
+
+        console.warn(
+            "Chunk received without file."
+        );
+
+        return;
+    }
+
+
+    let chunk = data;
+
+
+    /*
+        ArrayBuffer.
+    */
+
+    if (
+        chunk instanceof ArrayBuffer
+    ) {
+
+        receivedChunks.push(
+            chunk
+        );
+
+        receivedBytes +=
+            chunk.byteLength;
+
+    }
+
+
+    /*
+        Uint8Array.
+    */
+
+    else if (
+        chunk instanceof Uint8Array
+    ) {
+
+        receivedChunks.push(
+            chunk
+        );
+
+        receivedBytes +=
+            chunk.byteLength;
+    }
+
+
+    /*
+        Blob.
+    */
+
+    else if (
+        chunk instanceof Blob
+    ) {
+
+        /*
+            Convert Blob asynchronously.
+            ACK after conversion.
+        */
+
+        chunk.arrayBuffer()
+            .then((buffer) => {
+
+                receiveFileChunk(
+                    buffer
+                );
+
+            });
+
+        return;
+    }
+
+
+    else {
+
+        console.error(
+            "Unknown chunk type:",
+            chunk
+        );
+
+        return;
+    }
+
+
+    /*
+        Calculate progress.
+    */
+
+    let progress = 100;
+
+
+    if (
+        receivingFile.size > 0
+    ) {
+
+        progress =
+            (
+                receivedBytes /
+                receivingFile.size
+            ) * 100;
+    }
+
+
+    progress =
+        Math.min(
+            progress,
+            100
+        );
+
+
+    transferProgress.style.width =
+        `${progress}%`;
+
+
+    transferStatus.textContent =
+        `Receiving ${receivedFileNumber}/${receivedTotalFiles}: ${receivingFile.name} — ${Math.round(progress)}%`;
+
+
+    /*
+        ACK this chunk.
+    */
+
+    if (
+        connection &&
+        connection.open
+    ) {
+
+        connection.send({
+
+            type:
+                "chunk-ack"
+        });
+    }
+}
+
+
+/* =========================================================
+   FINISH RECEIVING FILE
+========================================================= */
+
+function finishReceivingFile() {
+
+    if (!receivingFile) {
+        return;
+    }
+
+
+    console.log(
+        "Finished receiving:",
+        receivingFile.name
+    );
+
+
+    /*
+        Create Blob.
+    */
+
+    const blob =
+        new Blob(
+            receivedChunks,
+            {
+                type:
+                    receivingFile.mime
+            }
+        );
+
+
+    /*
+        Create download URL.
+    */
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+
+    receivedObjectUrls.push(
+        url
+    );
+
+
+    /*
+        Add file to receiver UI.
+    */
+
+    addReceivedFile(
+        receivingFile.name,
+        url
+    );
+
+
+    transferProgress.style.width =
+        "100%";
+
+
+    transferStatus.textContent =
+        `Received ${receivedFileNumber}/${receivedTotalFiles}: ${receivingFile.name}`;
+
+
+    /*
+        Tell sender the complete file
+        has been reconstructed.
+    */
+
+    if (
+        connection &&
+        connection.open
+    ) {
+
+        connection.send({
+
+            type:
+                "file-ack"
+        });
+    }
+
+
+    /*
+        Clear current receiving state.
+    */
+
+    receivedChunks = [];
+
+    receivedBytes = 0;
+
+    receivingFile = null;
+}
+
+
+/* =========================================================
+   ADD RECEIVED FILE
+========================================================= */
+
+function addReceivedFile(
+    name,
+    url
+) {
+
+    /*
+        If the original received-file
+        element exists, use it.
+    */
+
+    if (
+        receivedFile &&
+        receivedFile.classList.contains(
+            "hidden"
+        )
+    ) {
+
+        receivedFile.classList.remove(
+            "hidden"
+        );
+
+
+        receivedFileName.textContent =
+            name;
+
+
+        downloadFile.href =
+            url;
+
+
+        downloadFile.download =
+            name;
+
+
+        return;
+    }
+
+
+    /*
+        Additional received files.
+    */
+
+    const item =
+        document.createElement(
+            "div"
+        );
+
+
+    item.className =
+        "received-file-item";
+
+
+    const nameElement =
+        document.createElement(
+            "span"
+        );
+
+
+    nameElement.textContent =
+        name;
+
+
+    const download =
+        document.createElement(
+            "a"
+        );
+
+
+    download.href =
+        url;
+
+    download.download =
+        name;
+
+    download.textContent =
+        "Download";
+
+
+    item.appendChild(
+        nameElement
+    );
+
+
+    item.appendChild(
+        download
+    );
+
+
+    /*
+        Add to file-transfer area.
+    */
+
+    if (fileTransfer) {
+
+        fileTransfer.appendChild(
+            item
+        );
+    }
+}
+
+
+/* =========================================================
+   FORMAT FILE SIZE
 ========================================================= */
 
 function formatFileSize(bytes) {
@@ -925,633 +1803,17 @@ function formatFileSize(bytes) {
 }
 
 
-
 /* =========================================================
-   SEND FILE BUTTON
-========================================================= */
-
-if (sendFileBtn) {
-
-    sendFileBtn.addEventListener(
-        "click",
-        sendSelectedFile
-    );
-}
-
-
-
-/* =========================================================
-   SEND FILE
-========================================================= */
-
-async function sendSelectedFile() {
-
-    if (!selectedFile) {
-
-        if (transferStatus) {
-
-            transferStatus.textContent =
-                "Select a file first.";
-        }
-
-        return;
-    }
-
-
-    if (
-        !connection ||
-        !connection.open
-    ) {
-
-        if (transferStatus) {
-
-            transferStatus.textContent =
-                "No peer connection.";
-        }
-
-        return;
-    }
-
-
-    sendFileBtn.disabled = true;
-
-
-    transferProgress.style.width =
-        "0%";
-
-
-    transferStatus.textContent =
-        "Preparing file...";
-
-
-    /*
-        Send metadata first.
-    */
-
-    connection.send({
-        type: "file-start",
-
-        name:
-            selectedFile.name,
-
-        size:
-            selectedFile.size,
-
-        mime:
-            selectedFile.type ||
-            "application/octet-stream"
-    });
-
-
-    let offset = 0;
-
-
-    try {
-
-        while (
-            offset <
-            selectedFile.size
-        ) {
-
-            /*
-                Read one 64 KB chunk.
-            */
-
-            const blob =
-                selectedFile.slice(
-                    offset,
-                    offset + CHUNK_SIZE
-                );
-
-
-            const buffer =
-                await blob.arrayBuffer();
-
-
-            /*
-                Send chunk.
-            */
-
-            connection.send({
-                type: "file-chunk",
-
-                data: buffer
-            });
-
-
-            offset +=
-                buffer.byteLength;
-
-
-            const progress =
-                (
-                    offset /
-                    selectedFile.size
-                ) * 100;
-
-
-            transferProgress.style.width =
-                `${progress}%`;
-
-
-            transferStatus.textContent =
-                `Sending ${Math.round(progress)}%`;
-
-
-            /*
-                Wait for the receiver's
-                acknowledgement before
-                sending the next chunk.
-
-                This prevents excessive
-                buffering.
-            */
-
-            await waitForChunkAck();
-        }
-
-
-        /*
-            Tell receiver the file
-            is completely transferred.
-        */
-
-        connection.send({
-            type: "file-end"
-        });
-
-
-        transferProgress.style.width =
-            "100%";
-
-
-        transferStatus.textContent =
-            "File sent successfully.";
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "File send error:",
-            error
-        );
-
-
-        transferStatus.textContent =
-            "File transfer failed.";
-
-    }
-
-
-    sendFileBtn.disabled = false;
-}
-
-
-
-/* =========================================================
-   CHUNK ACK
-========================================================= */
-
-let chunkAckResolver = null;
-
-
-function waitForChunkAck() {
-
-    return new Promise(
-        (resolve, reject) => {
-
-            chunkAckResolver =
-                resolve;
-
-
-            /*
-                Safety timeout.
-
-                If the receiver does not
-                acknowledge within 30 seconds,
-                stop the transfer.
-            */
-
-            setTimeout(
-                () => {
-
-                    if (
-                        chunkAckResolver ===
-                        resolve
-                    ) {
-
-                        chunkAckResolver =
-                            null;
-
-                        reject(
-                            new Error(
-                                "Chunk acknowledgement timeout"
-                            )
-                        );
-                    }
-
-                },
-                30000
-            );
-        }
-    );
-}
-
-
-
-/* =========================================================
-   HANDLE INCOMING DATA
-========================================================= */
-
-function handleIncomingData(data) {
-
-    if (!data) {
-        return;
-    }
-
-
-    /*
-        FILE START
-    */
-
-    if (
-        typeof data === "object" &&
-        data.type === "file-start"
-    ) {
-
-        startReceivingFile(
-            data
-        );
-
-        return;
-    }
-
-
-    /*
-        FILE CHUNK
-    */
-
-    if (
-        typeof data === "object" &&
-        data.type === "file-chunk"
-    ) {
-
-        receiveFileChunk(
-            data.data
-        );
-
-        return;
-    }
-
-
-    /*
-        FILE END
-    */
-
-    if (
-        typeof data === "object" &&
-        data.type === "file-end"
-    ) {
-
-        finishReceivingFile();
-
-        return;
-    }
-
-
-    /*
-        CHUNK ACK
-    */
-
-    if (
-        typeof data === "object" &&
-        data.type === "chunk-ack"
-    ) {
-
-        if (chunkAckResolver) {
-
-            const resolve =
-                chunkAckResolver;
-
-            chunkAckResolver =
-                null;
-
-            resolve();
-        }
-
-        return;
-    }
-
-
-    /*
-        Unknown data.
-    */
-
-    console.log(
-        "Received data:",
-        data
-    );
-}
-
-
-
-/* =========================================================
-   START RECEIVING FILE
-========================================================= */
-
-function startReceivingFile(data) {
-
-    console.log(
-        "Receiving file:",
-        data.name
-    );
-
-
-    receivingFile = {
-
-        name:
-            data.name,
-
-        size:
-            Number(data.size),
-
-        mime:
-            data.mime ||
-            "application/octet-stream"
-    };
-
-
-    receivedChunks = [];
-
-    receivedBytes = 0;
-
-
-    /*
-        Remove old download URL.
-    */
-
-    if (receivedObjectUrl) {
-
-        URL.revokeObjectURL(
-            receivedObjectUrl
-        );
-
-        receivedObjectUrl =
-            null;
-    }
-
-
-    if (receivedFile) {
-
-        receivedFile.classList.add(
-            "hidden"
-        );
-    }
-
-
-    if (transferProgress) {
-
-        transferProgress.style.width =
-            "0%";
-    }
-
-
-    if (transferStatus) {
-
-        transferStatus.textContent =
-            `Receiving ${data.name}...`;
-    }
-}
-
-
-
-/* =========================================================
-   RECEIVE FILE CHUNK
-========================================================= */
-
-function receiveFileChunk(data) {
-
-    if (!receivingFile) {
-
-        console.warn(
-            "Received chunk without file metadata."
-        );
-
-        return;
-    }
-
-
-    /*
-        PeerJS may provide the binary
-        data as ArrayBuffer or Uint8Array.
-    */
-
-    let chunk = data;
-
-
-    if (
-        chunk instanceof Uint8Array
-    ) {
-
-        chunk =
-            chunk.buffer;
-    }
-
-
-    if (
-        chunk instanceof Blob
-    ) {
-
-        console.warn(
-            "Blob received. Converting..."
-        );
-
-        chunk.arrayBuffer()
-            .then(buffer => {
-
-                receiveFileChunk(
-                    buffer
-                );
-            });
-
-        return;
-    }
-
-
-    if (
-        !(chunk instanceof ArrayBuffer)
-    ) {
-
-        console.error(
-            "Invalid file chunk:",
-            chunk
-        );
-
-        return;
-    }
-
-
-    receivedChunks.push(
-        chunk
-    );
-
-
-    receivedBytes +=
-        chunk.byteLength;
-
-
-    const progress =
-        (
-            receivedBytes /
-            receivingFile.size
-        ) * 100;
-
-
-    if (transferProgress) {
-
-        transferProgress.style.width =
-            `${Math.min(
-                progress,
-                100
-            )}%`;
-    }
-
-
-    if (transferStatus) {
-
-        transferStatus.textContent =
-            `Receiving ${Math.round(
-                progress
-            )}%`;
-    }
-
-
-    /*
-        Tell sender that this chunk
-        was successfully received.
-    */
-
-    if (
-        connection &&
-        connection.open
-    ) {
-
-        connection.send({
-            type: "chunk-ack"
-        });
-    }
-}
-
-
-
-/* =========================================================
-   FINISH RECEIVING FILE
-========================================================= */
-
-function finishReceivingFile() {
-
-    if (!receivingFile) {
-        return;
-    }
-
-
-    console.log(
-        "File transfer complete:",
-        receivingFile.name
-    );
-
-
-    /*
-        Create the final Blob.
-    */
-
-    const blob =
-        new Blob(
-            receivedChunks,
-            {
-                type:
-                    receivingFile.mime
-            }
-        );
-
-
-    /*
-        Create browser download URL.
-    */
-
-    receivedObjectUrl =
-        URL.createObjectURL(
-            blob
-        );
-
-
-    /*
-        Display received file.
-    */
-
-    if (receivedFileName) {
-
-        receivedFileName.textContent =
-            receivingFile.name;
-    }
-
-
-    if (downloadFile) {
-
-        downloadFile.href =
-            receivedObjectUrl;
-
-        downloadFile.download =
-            receivingFile.name;
-    }
-
-
-    if (receivedFile) {
-
-        receivedFile.classList.remove(
-            "hidden"
-        );
-    }
-
-
-    if (transferProgress) {
-
-        transferProgress.style.width =
-            "100%";
-    }
-
-
-    if (transferStatus) {
-
-        transferStatus.textContent =
-            "File received successfully.";
-    }
-
-
-    /*
-        Clear receiving state.
-
-        Keep the Blob URL alive because
-        the Download button needs it.
-    */
-
-    receivedChunks = [];
-
-    receivedBytes = 0;
-
-    receivingFile = null;
-}
-
-
-
-/* =========================================================
-   PAGE EXIT
+   CLEANUP
 ========================================================= */
 
 window.addEventListener(
     "beforeunload",
     () => {
+
+        /*
+            Stop camera.
+        */
 
         if (
             qrScanner &&
@@ -1564,21 +1826,37 @@ window.addEventListener(
         }
 
 
-        if (
-            receivedObjectUrl
+        /*
+            Revoke received file URLs.
+        */
+
+        for (
+            const url of receivedObjectUrls
         ) {
 
             URL.revokeObjectURL(
-                receivedObjectUrl
+                url
             );
         }
+
+
+        /*
+            Clear ACK timers.
+        */
+
+        clearTimeout(
+            chunkAckTimeout
+        );
+
+        clearTimeout(
+            fileAckTimeout
+        );
     }
 );
 
 
-
 /* =========================================================
-   START APPLICATION
+   START
 ========================================================= */
 
 createPeer();
