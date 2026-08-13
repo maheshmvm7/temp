@@ -1,115 +1,76 @@
 let peer = null;
-let connection = null;
-let mode = null;
+let conn = null;
 
 let selectedFile = null;
+
 let receivingFile = null;
 let receivedChunks = [];
 let receivedBytes = 0;
 
-const CHUNK_SIZE = 16 * 1024; // 16 KB
-const MAX_BUFFERED_AMOUNT = 1024 * 1024; // 1 MB
+const CHUNK_SIZE = 16 * 1024;
 
 
-/* =========================================================
-   MODE SELECTION
-========================================================= */
+/* =====================================================
+   MODE
+===================================================== */
 
-function selectMode(selectedMode) {
-    mode = selectedMode;
+function selectMode(mode) {
 
-    document.getElementById("modeSelect").classList.add("hidden");
+    document.getElementById("modeSelect")
+        .classList.add("hidden");
 
-    document.getElementById("step1").classList.remove("active");
-    document.getElementById("step1").classList.add("done");
+    document.getElementById("step1")
+        .classList.remove("active");
 
-    document.getElementById("step2").classList.add("active");
+    document.getElementById("step1")
+        .classList.add("done");
 
-    if (selectedMode === "sender") {
-        document.getElementById("senderSection").classList.remove("hidden");
+    document.getElementById("step2")
+        .classList.add("active");
 
-        setupSenderUI();
-        initSenderPeer();
+
+    if (mode === "sender") {
+
+        document.getElementById("senderSection")
+            .classList.remove("hidden");
+
+        initSender();
 
     } else {
-        document.getElementById("receiverSection").classList.remove("hidden");
 
-        setupReceiverUI();
+        document.getElementById("receiverSection")
+            .classList.remove("hidden");
+
         initReceiver();
     }
 }
 
 
-/* =========================================================
-   BACK BUTTON
-========================================================= */
-
-function goBack() {
-    cleanupConnection();
-
-    if (peer) {
-        peer.destroy();
-        peer = null;
-    }
-
-    mode = null;
-    selectedFile = null;
-
-    receivedChunks = [];
-    receivingFile = null;
-    receivedBytes = 0;
-
-    document.getElementById("senderSection").classList.add("hidden");
-    document.getElementById("receiverSection").classList.add("hidden");
-
-    document.getElementById("modeSelect").classList.remove("hidden");
-
-    document.getElementById("step1").classList.remove("done");
-    document.getElementById("step1").classList.add("active");
-
-    document.getElementById("step2").classList.remove("active");
-    document.getElementById("step2").classList.remove("done");
-
-    document.getElementById("step3").classList.remove("active");
-
-    const peerId = document.getElementById("myPeerId");
-
-    if (peerId) {
-        peerId.textContent = "generating...";
-    }
-
-    const remoteVideo = document.getElementById("remoteVideo");
-
-    if (remoteVideo) {
-        remoteVideo.classList.remove("active");
-        remoteVideo.srcObject = null;
-    }
-}
-
-
-/* =========================================================
+/* =====================================================
    SENDER
-========================================================= */
+===================================================== */
 
-function initSenderPeer() {
-    if (peer) {
-        peer.destroy();
-    }
+function initSender() {
 
-    peer = new Peer(undefined, {
-        debug: 2
-    });
+    console.log("Creating sender Peer...");
 
-    peer.on("open", () => {
+    peer = new Peer();
+
+    peer.on("open", function (id) {
+
+        console.log("Sender Peer ID:", id);
+
         setStatus(
             "sender",
             "success",
-            "Ready. Enter the Receiver Peer ID."
+            "Peer ready. Enter receiver ID."
         );
     });
 
-    peer.on("error", (error) => {
-        console.error("Peer error:", error);
+
+    peer.on("error", function (error) {
+
+        console.error("PeerJS error:", error);
 
         setStatus(
             "sender",
@@ -118,7 +79,11 @@ function initSenderPeer() {
         );
     });
 
-    peer.on("disconnected", () => {
+
+    peer.on("disconnected", function () {
+
+        console.log("Peer disconnected");
+
         setStatus(
             "sender",
             "error",
@@ -126,347 +91,227 @@ function initSenderPeer() {
         );
     });
 
-    peer.on("close", () => {
-        setStatus(
-            "sender",
-            "error",
-            "Peer connection closed."
-        );
-    });
-}
-
-
-/* =========================================================
-   CREATE SENDER UI
-========================================================= */
-
-function setupSenderUI() {
-    const card = document.querySelector("#senderSection .card");
-
-    if (!card) return;
-
-    if (document.getElementById("fileInput")) {
-        return;
-    }
-
-    const fileContainer = document.createElement("div");
-
-    fileContainer.id = "fileTransferControls";
-
-    fileContainer.innerHTML = `
-        <div style="
-            margin-top:20px;
-            padding-top:20px;
-            border-top:1px solid var(--border);
-        ">
-
-            <label style="
-                font-size:12px;
-                font-family:'JetBrains Mono',monospace;
-                color:var(--muted);
-                display:block;
-                margin-bottom:8px;
-            ">
-                SELECT FILE
-            </label>
-
-            <input
-                type="file"
-                id="fileInput"
-                style="
-                    width:100%;
-                    padding:12px;
-                    background:var(--bg);
-                    border:1px solid var(--border);
-                    border-radius:var(--radius);
-                    color:var(--text);
-                    font-family:'JetBrains Mono',monospace;
-                    cursor:pointer;
-                "
-            >
-
-            <div
-                id="selectedFileInfo"
-                style="
-                    margin-top:12px;
-                    padding:12px;
-                    background:var(--bg);
-                    border:1px solid var(--border);
-                    border-radius:var(--radius);
-                    font-family:'JetBrains Mono',monospace;
-                    font-size:12px;
-                    color:var(--muted);
-                    display:none;
-                    line-height:1.6;
-                "
-            ></div>
-
-            <div
-                id="transferProgressContainer"
-                style="
-                    margin-top:12px;
-                    display:none;
-                "
-            >
-                <div style="
-                    display:flex;
-                    justify-content:space-between;
-                    font-family:'JetBrains Mono',monospace;
-                    font-size:11px;
-                    color:var(--muted);
-                    margin-bottom:6px;
-                ">
-                    <span>TRANSFER</span>
-                    <span id="transferPercent">0%</span>
-                </div>
-
-                <div style="
-                    width:100%;
-                    height:6px;
-                    background:var(--border);
-                    border-radius:10px;
-                    overflow:hidden;
-                ">
-                    <div
-                        id="transferProgress"
-                        style="
-                            width:0%;
-                            height:100%;
-                            background:var(--accent);
-                            transition:width .15s ease;
-                        "
-                    ></div>
-                </div>
-            </div>
-
-            <button
-                id="sendFileBtn"
-                class="btn btn-primary"
-                style="margin-top:12px;"
-                disabled
-            >
-                Send File
-            </button>
-
-        </div>
-    `;
-
-    card.appendChild(fileContainer);
 
     document
         .getElementById("fileInput")
-        .addEventListener("change", handleFileSelect);
+        .addEventListener(
+            "change",
+            selectFile
+        );
+
 
     document
         .getElementById("sendFileBtn")
-        .addEventListener("click", sendSelectedFile);
+        .addEventListener(
+            "click",
+            sendFile
+        );
 }
 
 
-/* =========================================================
-   FILE SELECT
-========================================================= */
+/* =====================================================
+   SELECT FILE
+===================================================== */
 
-function handleFileSelect(event) {
-    const file = event.target.files[0];
+function selectFile(event) {
 
-    if (!file) {
-        selectedFile = null;
+    selectedFile = event.target.files[0];
 
-        document.getElementById("sendFileBtn").disabled = true;
-
+    if (!selectedFile) {
         return;
     }
 
-    selectedFile = file;
-
-    const info = document.getElementById("selectedFileInfo");
+    const info =
+        document.getElementById(
+            "selectedFileInfo"
+        );
 
     info.style.display = "block";
 
     info.innerHTML = `
         <strong style="color:var(--text)">
-            ${escapeHTML(file.name)}
+            ${escapeHTML(selectedFile.name)}
         </strong>
         <br>
-        Size: ${formatBytes(file.size)}
-        <br>
-        Type: ${escapeHTML(file.type || "Unknown")}
+        ${formatBytes(selectedFile.size)}
     `;
 
-    document.getElementById("sendFileBtn").disabled = false;
+    document.getElementById(
+        "sendFileBtn"
+    ).disabled = false;
 
     setStatus(
         "sender",
         "info",
-        "File selected. Ready to send."
+        "File selected."
     );
 }
 
 
-/* =========================================================
-   CONNECT TO RECEIVER
-========================================================= */
+/* =====================================================
+   SEND FILE
+===================================================== */
 
-function connectToReceiver(remoteId) {
-    return new Promise((resolve, reject) => {
+async function sendFile() {
 
-        if (!peer) {
-            reject(new Error("Peer is not initialized."));
-            return;
-        }
+    if (!selectedFile) {
 
-        if (peer.destroyed) {
-            reject(new Error("Peer has been destroyed."));
-            return;
-        }
+        setStatus(
+            "sender",
+            "error",
+            "Select a file first."
+        );
 
-        const conn = peer.connect(remoteId, {
-            reliable: true,
-            serialization: "binary"
-        });
+        return;
+    }
 
-        connection = conn;
 
-        let finished = false;
+    const remoteId =
+        document
+            .getElementById("remoteIdInput")
+            .value
+            .trim();
 
-        conn.on("open", () => {
 
-            if (finished) return;
+    if (!remoteId) {
 
-            finished = true;
+        setStatus(
+            "sender",
+            "error",
+            "Enter receiver Peer ID."
+        );
 
-            console.log("DataChannel connected");
+        return;
+    }
+
+
+    if (!peer || peer.destroyed) {
+
+        setStatus(
+            "sender",
+            "error",
+            "Peer is not ready."
+        );
+
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            "sendFileBtn"
+        );
+
+    button.disabled = true;
+
+
+    try {
+
+        setStatus(
+            "sender",
+            "info",
+            "Connecting to receiver..."
+        );
+
+
+        /*
+         * Create PeerJS DataConnection.
+         *
+         * IMPORTANT:
+         * Do NOT specify serialization:"binary".
+         */
+
+        conn = peer.connect(
+            remoteId,
+            {
+                reliable: true
+            }
+        );
+
+
+        conn.on("open", async function () {
+
+            console.log(
+                "Data connection opened"
+            );
+
 
             setStatus(
                 "sender",
                 "success",
-                "Connected to receiver."
+                "Connected. Starting transfer..."
             );
 
-            resolve(conn);
+
+            try {
+
+                await transferFile(
+                    selectedFile
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Transfer error:",
+                    error
+                );
+
+                setStatus(
+                    "sender",
+                    "error",
+                    "Transfer failed."
+                );
+
+                button.disabled = false;
+            }
         });
 
-        conn.on("error", (error) => {
 
-            console.error("Data connection error:", error);
+        conn.on("error", function (error) {
 
-            if (!finished) {
-                finished = true;
-                reject(error);
-            }
+            console.error(
+                "Data connection error:",
+                error
+            );
 
             setStatus(
                 "sender",
                 "error",
-                "Data connection error."
-            );
-        });
-
-        conn.on("close", () => {
-
-            console.log("Data connection closed");
-
-            if (mode === "sender") {
-                setStatus(
-                    "sender",
-                    "info",
-                    "Connection closed."
-                );
-            }
-        });
-    });
-}
-
-
-/* =========================================================
-   SEND FILE
-========================================================= */
-
-async function sendSelectedFile() {
-
-    if (!selectedFile) {
-        setStatus(
-            "sender",
-            "error",
-            "Please select a file first."
-        );
-
-        return;
-    }
-
-    const remoteId =
-        document.getElementById("remoteIdInput").value.trim();
-
-    if (!remoteId) {
-        setStatus(
-            "sender",
-            "error",
-            "Enter the Receiver Peer ID first."
-        );
-
-        return;
-    }
-
-    if (!peer) {
-        setStatus(
-            "sender",
-            "error",
-            "Peer is not ready yet."
-        );
-
-        return;
-    }
-
-    const sendButton =
-        document.getElementById("sendFileBtn");
-
-    sendButton.disabled = true;
-
-    try {
-
-        /*
-         * If there is already a connection, reuse it.
-         */
-        if (!connection || !connection.open) {
-
-            setStatus(
-                "sender",
-                "info",
-                "Connecting to receiver..."
+                "Connection error."
             );
 
-            await connectToReceiver(remoteId);
-        }
+            button.disabled = false;
+        });
 
-        if (!connection || !connection.open) {
-            throw new Error("DataChannel is not open.");
-        }
 
-        await sendFile(connection, selectedFile);
+        conn.on("close", function () {
+
+            console.log(
+                "Data connection closed"
+            );
+
+        });
 
     } catch (error) {
 
-        console.error("File transfer error:", error);
+        console.error(error);
 
         setStatus(
             "sender",
             "error",
-            "Transfer failed: " + error.message
+            error.message
         );
 
-    } finally {
-
-        sendButton.disabled = false;
+        button.disabled = false;
     }
 }
 
 
-/* =========================================================
-   ACTUAL FILE TRANSFER
-========================================================= */
+/* =====================================================
+   TRANSFER FILE
+===================================================== */
 
-async function sendFile(conn, file) {
+async function transferFile(file) {
 
     const progressContainer =
         document.getElementById(
@@ -483,58 +328,66 @@ async function sendFile(conn, file) {
             "transferPercent"
         );
 
-    progressContainer.style.display = "block";
 
-    progress.style.width = "0%";
-    percent.textContent = "0%";
+    progressContainer.style.display =
+        "block";
 
-    setStatus(
-        "sender",
-        "info",
-        "Preparing file..."
-    );
 
     /*
-     * Tell receiver about the file.
+     * Send file information first.
      */
 
     conn.send({
         type: "file-start",
         name: file.name,
         size: file.size,
-        mime: file.type || "application/octet-stream"
+        mime: file.type ||
+            "application/octet-stream"
     });
+
 
     await sleep(100);
 
+
     let offset = 0;
+
 
     while (offset < file.size) {
 
         /*
-         * Wait if WebRTC's send buffer becomes large.
+         * Prevent the WebRTC buffer from
+         * becoming too large.
          */
 
-        await waitForBuffer(conn);
+        await waitForBuffer();
 
-        const chunk = file.slice(
-            offset,
-            offset + CHUNK_SIZE
-        );
 
-        const buffer = await chunk.arrayBuffer();
+        const slice =
+            file.slice(
+                offset,
+                offset + CHUNK_SIZE
+            );
+
+
+        const buffer =
+            await slice.arrayBuffer();
+
+
+        /*
+         * Send binary data.
+         */
 
         conn.send(buffer);
 
+
         offset += buffer.byteLength;
 
+
         const percentage =
-            Math.min(
-                100,
-                Math.round(
-                    (offset / file.size) * 100
-                )
+            Math.floor(
+                (offset / file.size) * 100
             );
+
 
         progress.style.width =
             percentage + "%";
@@ -542,37 +395,47 @@ async function sendFile(conn, file) {
         percent.textContent =
             percentage + "%";
 
+
         setStatus(
             "sender",
             "info",
-            `Sending ${percentage}%`
+            "Sending " +
+            percentage +
+            "%"
         );
 
+
         /*
-         * Give the browser a chance to process
-         * the WebRTC queue.
+         * Let browser process the
+         * DataChannel queue.
          */
+
         await sleep(0);
     }
 
+
     /*
-     * Tell receiver that the file is complete.
+     * Tell receiver transfer is complete.
      */
 
-    await waitForBuffer(conn);
+    await waitForBuffer();
+
 
     conn.send({
         type: "file-end"
     });
 
+
     progress.style.width = "100%";
     percent.textContent = "100%";
+
 
     setStatus(
         "sender",
         "success",
         "File sent successfully."
     );
+
 
     document.getElementById("step2")
         .classList.remove("active");
@@ -585,109 +448,97 @@ async function sendFile(conn, file) {
 }
 
 
-/* =========================================================
-   WEBRTC BUFFER CONTROL
-========================================================= */
+/* =====================================================
+   BUFFER CONTROL
+===================================================== */
 
-function waitForBuffer(conn) {
+function waitForBuffer() {
 
-    return new Promise((resolve) => {
+    return new Promise(function (resolve) {
+
+        if (!conn) {
+            resolve();
+            return;
+        }
+
 
         /*
-         * PeerJS exposes the underlying RTCDataChannel
-         * through dataChannel in current versions.
+         * PeerJS exposes the underlying
+         * RTCDataChannel as _dc in 1.5.x.
          */
 
         const channel =
-            conn.dataChannel ||
             conn._dc;
 
+
+        /*
+         * If the internal channel isn't
+         * available yet, don't block.
+         */
+
         if (!channel) {
+
             resolve();
             return;
         }
+
 
         if (
             channel.bufferedAmount <
-            MAX_BUFFERED_AMOUNT
+            512 * 1024
         ) {
+
             resolve();
             return;
         }
 
-        const checkBuffer = () => {
 
-            if (
-                channel.bufferedAmount <
-                MAX_BUFFERED_AMOUNT
-            ) {
+        const timer =
+            setInterval(function () {
 
-                channel.removeEventListener(
-                    "bufferedamountlow",
-                    checkBuffer
-                );
+                if (
+                    !conn ||
+                    !conn.open ||
+                    channel.bufferedAmount <
+                    512 * 1024
+                ) {
 
-                resolve();
-            }
-        };
+                    clearInterval(timer);
 
-        channel.bufferedAmountLowThreshold =
-            CHUNK_SIZE;
+                    resolve();
+                }
 
-        channel.addEventListener(
-            "bufferedamountlow",
-            checkBuffer
-        );
-
-        /*
-         * Fallback for browsers that do not
-         * trigger bufferedamountlow correctly.
-         */
-
-        const interval = setInterval(() => {
-
-            if (
-                channel.bufferedAmount <
-                MAX_BUFFERED_AMOUNT
-            ) {
-
-                clearInterval(interval);
-
-                channel.removeEventListener(
-                    "bufferedamountlow",
-                    checkBuffer
-                );
-
-                resolve();
-            }
-
-        }, 20);
+            }, 20);
     });
 }
 
 
-/* =========================================================
+/* =====================================================
    RECEIVER
-========================================================= */
+===================================================== */
 
 function initReceiver() {
 
-    if (peer) {
-        peer.destroy();
-    }
+    console.log(
+        "Creating receiver Peer..."
+    );
 
-    peer = new Peer(undefined, {
-        debug: 2
-    });
 
-    peer.on("open", (id) => {
+    peer = new Peer();
 
-        const idElement =
-            document.getElementById("myPeerId");
 
-        if (idElement) {
-            idElement.textContent = id;
-        }
+    peer.on("open", function (id) {
+
+        console.log(
+            "Receiver Peer ID:",
+            id
+        );
+
+
+        document.getElementById(
+            "myPeerId"
+        ).textContent = id;
+
 
         setStatus(
             "receiver",
@@ -698,131 +549,182 @@ function initReceiver() {
 
 
     /*
-     * Incoming WebRTC DataChannel
+     * This is the important event.
+     *
+     * Sender uses:
+     *
+     * peer.connect(receiverId)
+     *
+     * Receiver receives:
+     *
+     * peer.on("connection")
      */
 
-    peer.on("connection", (conn) => {
-
-        console.log(
-            "Incoming connection:",
-            conn.peer
-        );
-
-        connection = conn;
-
-        setStatus(
-            "receiver",
-            "success",
-            "Sender connected."
-        );
-
-        conn.on("open", () => {
+    peer.on(
+        "connection",
+        function (connection) {
 
             console.log(
-                "DataChannel opened."
+                "Incoming connection:",
+                connection.peer
             );
+
+
+            conn = connection;
+
 
             setStatus(
                 "receiver",
                 "success",
-                "Connected. Waiting for file..."
+                "Sender connected."
             );
 
-            document.getElementById("step2")
-                .classList.remove("active");
 
-            document.getElementById("step2")
-                .classList.add("done");
+            conn.on("open", function () {
 
-            document.getElementById("step3")
-                .classList.add("active");
-        });
+                console.log(
+                    "Receiver DataConnection open"
+                );
 
 
-        conn.on("data", handleIncomingData);
+                setStatus(
+                    "receiver",
+                    "success",
+                    "Connected. Waiting for file..."
+                );
 
 
-        conn.on("close", () => {
+                document.getElementById("step2")
+                    .classList.remove("active");
 
-            setStatus(
-                "receiver",
-                "info",
-                "Sender disconnected."
+                document.getElementById("step2")
+                    .classList.add("done");
+
+                document.getElementById("step3")
+                    .classList.add("active");
+            });
+
+
+            conn.on(
+                "data",
+                handleReceivedData
             );
 
-            connection = null;
-        });
+
+            conn.on(
+                "close",
+                function () {
+
+                    console.log(
+                        "Sender disconnected"
+                    );
 
 
-        conn.on("error", (error) => {
-
-            console.error(
-                "Receiver connection error:",
-                error
+                    setStatus(
+                        "receiver",
+                        "info",
+                        "Sender disconnected."
+                    );
+                }
             );
+
+
+            conn.on(
+                "error",
+                function (error) {
+
+                    console.error(
+                        "Connection error:",
+                        error
+                    );
+
+
+                    setStatus(
+                        "receiver",
+                        "error",
+                        "Connection error."
+                    );
+                }
+            );
+        }
+    );
+
+
+    peer.on("error", function (error) {
+
+        console.error(
+            "Receiver PeerJS error:",
+            error
+        );
+
+
+        setStatus(
+            "receiver",
+            "error",
+            "Peer error: " +
+            error.type
+        );
+    });
+
+
+    peer.on(
+        "disconnected",
+        function () {
 
             setStatus(
                 "receiver",
                 "error",
-                "Connection error: " +
-                error.message
+                "PeerJS disconnected."
             );
-        });
-    });
-
-
-    peer.on("error", (error) => {
-
-        console.error(
-            "Receiver peer error:",
-            error
-        );
-
-        setStatus(
-            "receiver",
-            "error",
-            "Peer error: " + error.type
-        );
-    });
-
-
-    peer.on("disconnected", () => {
-
-        setStatus(
-            "receiver",
-            "error",
-            "Disconnected from PeerJS server."
-        );
-    });
+        }
+    );
 }
 
 
-/* =========================================================
+/* =====================================================
    RECEIVE DATA
-========================================================= */
+===================================================== */
 
-function handleIncomingData(data) {
+function handleReceivedData(data) {
+
+    console.log(
+        "Received:",
+        typeof data,
+        data
+    );
+
 
     /*
-     * Metadata
+     * Metadata object
      */
 
     if (
+        data &&
         typeof data === "object" &&
-        data !== null &&
-        !isBinaryData(data)
+        !(data instanceof ArrayBuffer) &&
+        !(data instanceof Uint8Array) &&
+        !(data instanceof Blob)
     ) {
 
-        if (data.type === "file-start") {
+        if (
+            data.type ===
+            "file-start"
+        ) {
 
-            startReceivingFile(data);
+            startReceiving(
+                data
+            );
 
             return;
         }
 
-        if (data.type === "file-end") {
 
-            finishReceivingFile();
+        if (
+            data.type ===
+            "file-end"
+        ) {
+
+            finishReceiving();
 
             return;
         }
@@ -833,164 +735,176 @@ function handleIncomingData(data) {
      * Binary chunk
      */
 
-    if (isBinaryData(data)) {
+    if (
+        data instanceof ArrayBuffer
+    ) {
 
         receiveChunk(data);
 
         return;
     }
 
+
+    if (
+        data instanceof Uint8Array
+    ) {
+
+        receiveChunk(
+            data.buffer
+        );
+
+        return;
+    }
+
+
+    if (
+        data instanceof Blob
+    ) {
+
+        data.arrayBuffer()
+            .then(function (buffer) {
+
+                receiveChunk(buffer);
+
+            });
+
+        return;
+    }
+
+
     console.warn(
-        "Unknown data received:",
+        "Unknown data:",
         data
     );
 }
 
 
-/* =========================================================
+/* =====================================================
    START RECEIVING
-========================================================= */
+===================================================== */
 
-function startReceivingFile(metadata) {
+function startReceiving(data) {
 
     console.log(
-        "Receiving:",
-        metadata.name,
-        metadata.size
+        "File incoming:",
+        data.name,
+        data.size
     );
 
+
     receivingFile = {
-        name: metadata.name,
-        size: metadata.size,
-        mime:
-            metadata.mime ||
-            "application/octet-stream"
+        name: data.name,
+        size: data.size,
+        mime: data.mime
     };
+
 
     receivedChunks = [];
     receivedBytes = 0;
 
-    createReceiverProgressUI();
 
-    updateReceiverProgress();
+    createReceiverUI();
+
+
+    updateReceiveProgress();
+
 
     setStatus(
         "receiver",
         "info",
-        "Receiving " + metadata.name
+        "Receiving " +
+        data.name
     );
 }
 
 
-/* =========================================================
+/* =====================================================
    RECEIVE CHUNK
-========================================================= */
+===================================================== */
 
-function receiveChunk(data) {
+function receiveChunk(buffer) {
 
     if (!receivingFile) {
 
         console.warn(
-            "Received chunk without file metadata."
-        );
-
-        return;
-    }
-
-    let chunk;
-
-    /*
-     * PeerJS may return ArrayBuffer,
-     * Uint8Array, Blob, etc.
-     */
-
-    if (data instanceof ArrayBuffer) {
-
-        chunk = data;
-
-    } else if (
-        data instanceof Uint8Array
-    ) {
-
-        chunk = data.buffer;
-
-    } else if (
-        data instanceof Blob
-    ) {
-
-        data.arrayBuffer().then(buffer => {
-
-            receiveChunk(buffer);
-
-        });
-
-        return;
-
-    } else {
-
-        console.warn(
-            "Unknown binary data type."
+            "Received data without file metadata."
         );
 
         return;
     }
 
 
-    receivedChunks.push(chunk);
+    receivedChunks.push(
+        buffer
+    );
 
-    receivedBytes += chunk.byteLength;
 
-    updateReceiverProgress();
+    receivedBytes +=
+        buffer.byteLength;
+
+
+    updateReceiveProgress();
+
 
     const percentage =
-        Math.min(
-            100,
-            Math.round(
-                (receivedBytes /
-                    receivingFile.size) *
-                100
-            )
+        Math.floor(
+            (receivedBytes /
+                receivingFile.size) *
+            100
         );
+
 
     setStatus(
         "receiver",
         "info",
-        `Receiving ${percentage}%`
+        "Receiving " +
+        percentage +
+        "%"
     );
 }
 
 
-/* =========================================================
+/* =====================================================
    FINISH RECEIVING
-========================================================= */
+===================================================== */
 
-function finishReceivingFile() {
+function finishReceiving() {
 
     if (!receivingFile) {
         return;
     }
 
+
     console.log(
-        "File transfer complete."
+        "File received."
     );
 
-    const blob = new Blob(
-        receivedChunks,
-        {
-            type: receivingFile.mime
-        }
-    );
+
+    const blob =
+        new Blob(
+            receivedChunks,
+            {
+                type:
+                    receivingFile.mime
+            }
+        );
+
 
     const url =
         URL.createObjectURL(blob);
 
-    showDownloadButton(
+
+    showDownload(
         url,
         receivingFile.name,
         blob.size
     );
 
-    updateReceiverProgress(100);
+
+    updateReceiveProgress(
+        100
+    );
+
 
     setStatus(
         "receiver",
@@ -998,11 +912,10 @@ function finishReceivingFile() {
         "File received successfully."
     );
 
-    document.getElementById("step3")
-        .classList.add("done");
 
     /*
-     * Reset the transfer buffers.
+     * Don't clear the Blob URL immediately.
+     * The download button still needs it.
      */
 
     receivedChunks = [];
@@ -1011,51 +924,49 @@ function finishReceivingFile() {
 }
 
 
-/* =========================================================
-   RECEIVER PROGRESS UI
-========================================================= */
+/* =====================================================
+   RECEIVER UI
+===================================================== */
 
-function createReceiverProgressUI() {
+function createReceiverUI() {
+
+    let ui =
+        document.getElementById(
+            "receiverTransferUI"
+        );
+
+
+    if (ui) {
+
+        ui.style.display =
+            "block";
+
+        return;
+    }
+
 
     const card =
         document.querySelector(
             "#receiverSection .card"
         );
 
-    if (!card) return;
 
-    let container =
-        document.getElementById(
-            "receiverTransferUI"
+    ui =
+        document.createElement(
+            "div"
         );
 
-    if (container) {
-        container.style.display = "block";
-        return;
-    }
 
-    container =
-        document.createElement("div");
-
-    container.id =
+    ui.id =
         "receiverTransferUI";
 
-    container.style.marginTop = "20px";
 
-    container.innerHTML = `
-        <div style="
-            padding-top:20px;
-            border-top:1px solid var(--border);
-        ">
+    ui.innerHTML = `
 
-            <div style="
-                display:flex;
-                justify-content:space-between;
-                font-family:'JetBrains Mono',monospace;
-                font-size:11px;
-                color:var(--muted);
-                margin-bottom:6px;
-            ">
+        <div class="receiver-transfer">
+
+            <div class="progress-header">
+
                 <span id="receivingFileName">
                     Receiving...
                 </span>
@@ -1063,85 +974,79 @@ function createReceiverProgressUI() {
                 <span id="receivePercent">
                     0%
                 </span>
+
             </div>
 
-            <div style="
-                width:100%;
-                height:6px;
-                background:var(--border);
-                border-radius:10px;
-                overflow:hidden;
-            ">
+
+            <div class="progress-track">
 
                 <div
                     id="receiveProgress"
-                    style="
-                        width:0%;
-                        height:100%;
-                        background:var(--accent);
-                        transition:width .15s ease;
-                    "
+                    class="progress-bar"
                 ></div>
 
             </div>
 
+
             <div
                 id="receivedFileSize"
-                style="
-                    margin-top:8px;
-                    font-family:'JetBrains Mono',monospace;
-                    font-size:11px;
-                    color:var(--muted);
-                "
+                class="received-size"
             >
                 0 B
             </div>
 
+
             <div id="downloadArea"></div>
 
         </div>
+
     `;
 
-    card.appendChild(container);
+
+    card.appendChild(ui);
 }
 
 
-/* =========================================================
-   UPDATE RECEIVER PROGRESS
-========================================================= */
+/* =====================================================
+   RECEIVE PROGRESS
+===================================================== */
 
-function updateReceiverProgress(forcePercent = null) {
+function updateReceiveProgress(
+    forcePercent = null
+) {
 
     if (!receivingFile) {
         return;
     }
 
+
     const percentage =
         forcePercent !== null
             ? forcePercent
-            : Math.min(
-                100,
-                Math.round(
-                    (receivedBytes /
-                        receivingFile.size) *
-                    100
-                )
+            : Math.floor(
+                (receivedBytes /
+                    receivingFile.size) *
+                100
             );
+
 
     const progress =
         document.getElementById(
             "receiveProgress"
         );
 
+
     const percent =
         document.getElementById(
             "receivePercent"
         );
 
+
     const filename =
         document.getElementById(
             "receivingFileName"
         );
+
 
     const size =
         document.getElementById(
@@ -1150,32 +1055,45 @@ function updateReceiverProgress(forcePercent = null) {
 
 
     if (progress) {
+
         progress.style.width =
             percentage + "%";
     }
 
+
     if (percent) {
+
         percent.textContent =
             percentage + "%";
     }
 
+
     if (filename) {
+
         filename.textContent =
             receivingFile.name;
     }
 
+
     if (size) {
+
         size.textContent =
-            `${formatBytes(receivedBytes)} / ${formatBytes(receivingFile.size)}`;
+            formatBytes(
+                receivedBytes
+            ) +
+            " / " +
+            formatBytes(
+                receivingFile.size
+            );
     }
 }
 
 
-/* =========================================================
-   DOWNLOAD BUTTON
-========================================================= */
+/* =====================================================
+   DOWNLOAD
+===================================================== */
 
-function showDownloadButton(
+function showDownload(
     url,
     filename,
     size
@@ -1186,100 +1104,36 @@ function showDownloadButton(
             "downloadArea"
         );
 
-    if (!area) return;
 
     area.innerHTML = `
-        <div style="
-            margin-top:16px;
-            padding:14px;
-            background:var(--bg);
-            border:1px solid var(--accent);
-            border-radius:var(--radius);
-        ">
 
-            <div style="
-                font-family:'JetBrains Mono',monospace;
-                font-size:12px;
-                color:var(--text);
-                margin-bottom:10px;
-                word-break:break-word;
-            ">
+        <div class="download-box">
+
+            <div class="download-name">
                 ${escapeHTML(filename)}
             </div>
 
-            <div style="
-                font-family:'JetBrains Mono',monospace;
-                font-size:11px;
-                color:var(--muted);
-                margin-bottom:12px;
-            ">
+            <div class="download-size">
                 ${formatBytes(size)}
             </div>
 
             <a
+                class="btn btn-primary"
                 href="${url}"
                 download="${escapeHTML(filename)}"
-                class="btn btn-primary"
-                style="
-                    text-decoration:none;
-                    display:flex;
-                "
             >
                 Download File
             </a>
 
         </div>
+
     `;
 }
 
 
-/* =========================================================
-   RECEIVER UI
-========================================================= */
-
-function setupReceiverUI() {
-
-    /*
-     * Remove the old video card because
-     * this is now a file-transfer application.
-     */
-
-    const videoCard =
-        document.getElementById("videoCard");
-
-    if (videoCard) {
-        videoCard.remove();
-    }
-
-    /*
-     * Remove old screen-share wording.
-     */
-
-    const receiverTitle =
-        document.querySelector(
-            "#receiverSection .card-title"
-        );
-
-    if (receiverTitle) {
-        receiverTitle.textContent =
-            "Receiver — File Transfer";
-    }
-
-    const receiverText =
-        document.querySelector(
-            "#receiverSection .card p"
-        );
-
-    if (receiverText) {
-        receiverText.innerHTML =
-            `Your Peer ID is ready. Share it with the <strong style="color:var(--text)">Sender</strong>.`;
-    }
-}
-
-
-/* =========================================================
+/* =====================================================
    STATUS
-========================================================= */
+===================================================== */
 
 function setStatus(
     section,
@@ -1292,50 +1146,57 @@ function setStatus(
             section + "Status"
         );
 
+
     const textElement =
         document.getElementById(
             section + "StatusText"
         );
 
+
     if (!bar || !textElement) {
         return;
     }
 
+
     bar.className =
-        "status-bar " + type;
+        "status-bar " +
+        type;
+
 
     textElement.textContent =
         text;
 
+
     const dot =
-        bar.querySelector(".dot");
+        bar.querySelector(
+            ".dot"
+        );
+
 
     if (dot) {
 
         dot.className =
             "dot" +
-            (type === "info"
-                ? " pulse"
-                : "");
+            (
+                type === "info"
+                    ? " pulse"
+                    : ""
+            );
     }
 }
 
 
-/* =========================================================
-   COPY PEER ID
-========================================================= */
+/* =====================================================
+   COPY ID
+===================================================== */
 
 function copyId() {
 
-    const element =
+    const id =
         document.getElementById(
             "myPeerId"
-        );
+        ).textContent;
 
-    if (!element) return;
-
-    const id =
-        element.textContent;
 
     if (
         !id ||
@@ -1344,71 +1205,131 @@ function copyId() {
         return;
     }
 
+
     navigator.clipboard
         .writeText(id)
-        .then(() => {
+        .then(function () {
 
-            const btn =
+            const button =
                 document.querySelector(
                     ".copy-btn"
                 );
 
-            if (!btn) return;
 
-            btn.textContent = "✓";
+            button.textContent =
+                "✓";
 
-            setTimeout(() => {
-                btn.textContent = "📋";
-            }, 2000);
-        })
-        .catch(error => {
 
-            console.error(
-                "Copy failed:",
-                error
+            setTimeout(
+                function () {
+
+                    button.textContent =
+                        "📋";
+
+                },
+                2000
             );
         });
 }
 
 
-/* =========================================================
-   CLEANUP
-========================================================= */
+/* =====================================================
+   BACK
+===================================================== */
 
-function cleanupConnection() {
+function goBack() {
 
-    if (connection) {
+    if (conn) {
 
         try {
-            connection.close();
-        } catch (error) {
-            console.error(error);
-        }
+            conn.close();
+        } catch (e) {}
 
-        connection = null;
+        conn = null;
     }
+
+
+    if (peer) {
+
+        try {
+            peer.destroy();
+        } catch (e) {}
+
+        peer = null;
+    }
+
+
+    selectedFile = null;
+
+    receivingFile = null;
+
+    receivedChunks = [];
+
+    receivedBytes = 0;
+
+
+    document.getElementById(
+        "senderSection"
+    ).classList.add("hidden");
+
+
+    document.getElementById(
+        "receiverSection"
+    ).classList.add("hidden");
+
+
+    document.getElementById(
+        "modeSelect"
+    ).classList.remove("hidden");
+
+
+    document.getElementById(
+        "step1"
+    ).classList.remove("done");
+
+
+    document.getElementById(
+        "step1"
+    ).classList.add("active");
+
+
+    document.getElementById(
+        "step2"
+    ).classList.remove("active");
+
+
+    document.getElementById(
+        "step2"
+    ).classList.remove("done");
+
+
+    document.getElementById(
+        "step3"
+    ).classList.remove("active");
 }
 
 
-/* =========================================================
+/* =====================================================
    HELPERS
-========================================================= */
+===================================================== */
 
-function isBinaryData(data) {
+function sleep(ms) {
 
-    return (
-        data instanceof ArrayBuffer ||
-        data instanceof Uint8Array ||
-        data instanceof Blob
+    return new Promise(
+        resolve => setTimeout(
+            resolve,
+            ms
+        )
     );
 }
 
 
 function formatBytes(bytes) {
 
-    if (!bytes || bytes === 0) {
+    if (bytes === 0) {
         return "0 B";
     }
+
 
     const units = [
         "B",
@@ -1418,31 +1339,24 @@ function formatBytes(bytes) {
         "TB"
     ];
 
-    const index =
+
+    const i =
         Math.floor(
             Math.log(bytes) /
             Math.log(1024)
         );
 
-    const value =
-        bytes /
-        Math.pow(1024, index);
 
     return (
-        value.toFixed(
-            index === 0 ? 0 : 2
-        ) +
+        (bytes /
+            Math.pow(1024, i))
+            .toFixed(
+                i === 0 ? 0 : 2
+            )
+        +
         " " +
-        units[index]
+        units[i]
     );
-}
-
-
-function sleep(ms) {
-
-    return new Promise(resolve => {
-        setTimeout(resolve, ms);
-    });
 }
 
 
@@ -1455,19 +1369,3 @@ function escapeHTML(value) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
-
-
-/* =========================================================
-   STARTUP
-========================================================= */
-
-document.addEventListener(
-    "DOMContentLoaded",
-    () => {
-
-        console.log(
-            "P2P File Transfer ready."
-        );
-
-    }
-);
