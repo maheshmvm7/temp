@@ -3,10 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>P2P Transfer</title>
 
@@ -28,17 +25,13 @@
 
         <header class="header">
 
-            <div class="logo">
-                P2P
-            </div>
+            <div class="logo">P2P</div>
 
             <div class="status">
 
                 <span id="status-dot"></span>
 
-                <span id="status-text">
-                    Starting...
-                </span>
+                <span id="status-text">Starting...</span>
 
             </div>
 
@@ -49,48 +42,27 @@
 
             <div class="heading">
 
-                <span class="eyebrow">
-                    PEER CONNECTION
-                </span>
+                <span class="eyebrow">PEER CONNECTION</span>
 
-                <h1>
-                    Connect device
-                </h1>
+                <h1>Connect device</h1>
 
-                <p id="description">
-                    Show your QR code or scan another device.
-                </p>
+                <p id="description">Show your QR code or scan another device.</p>
 
             </div>
 
 
             <div class="toggle-wrapper">
 
-                <button
-                    class="toggle-option active"
-                    id="show-qr-btn"
-                    type="button"
-                >
-                    My QR
-                </button>
+                <button class="toggle-option active" id="show-qr-btn" type="button">My QR</button>
 
-                <button
-                    class="toggle-option"
-                    id="scan-qr-btn"
-                    type="button"
-                >
-                    Scan QR
-                </button>
+                <button class="toggle-option" id="scan-qr-btn" type="button">Scan QR</button>
 
             </div>
 
 
             <!-- MY QR -->
 
-            <div
-                id="qr-section"
-                class="panel"
-            >
+            <div id="qr-section" class="panel">
 
                 <div class="qr-container">
 
@@ -101,65 +73,89 @@
 
                 <div class="peer-info">
 
-                    <span class="label">
-                        DEVICE ID
-                    </span>
+                    <span class="label">DEVICE ID</span>
 
-                    <span id="peer-id">
-                        Connecting...
-                    </span>
+                    <span id="peer-id">Connecting...</span>
 
                 </div>
 
 
-                <p class="hint">
-                    Scan this QR code from another device.
-                </p>
+                <p class="hint">Scan this QR code from another device.</p>
 
             </div>
 
 
             <!-- SCANNER -->
 
-            <div
-                id="scanner-section"
-                class="panel hidden"
-            >
+            <div id="scanner-section" class="panel hidden">
 
                 <div id="reader"></div>
 
-                <div
-                    id="scanner-message"
-                    class="scanner-message"
-                >
-                    Camera is starting...
-                </div>
+                <div id="scanner-message" class="scanner-message">Camera is starting...</div>
 
             </div>
 
 
             <!-- CONNECTION RESULT -->
 
-            <div
-                id="connection-result"
-                class="connection-result hidden"
-            >
+            <div id="connection-result" class="connection-result hidden">
 
-                <span class="result-label">
-                    CONNECTED
-                </span>
+                <span class="result-label">CONNECTED</span>
 
-                <strong id="connected-peer">
-                    —
-                </strong>
+                <strong id="connected-peer">—</strong>
 
-                <span class="result-status">
-                    Peer-to-peer connection established
-                </span>
+                <span class="result-status">Peer-to-peer connection established</span>
 
             </div>
 
         </section>
+        <!-- FILE TRANSFER -->
+
+<section id="file-transfer" class="file-transfer hidden">
+
+    <input
+        type="file"
+        id="file-input"
+    >
+
+    <div id="file-info">
+        <div id="file-name">No file selected</div>
+        <div id="file-size"></div>
+    </div>
+
+    <button
+        id="send-file-btn"
+        type="button"
+        disabled
+    >
+        Send File
+    </button>
+
+    <div class="progress-wrapper">
+        <div id="transfer-progress"></div>
+    </div>
+
+    <div id="transfer-status">
+        Waiting for connection
+    </div>
+
+    <div id="received-file" class="hidden">
+
+        <div>
+            File received:
+            <strong id="received-file-name"></strong>
+        </div>
+
+        <a
+            id="download-file"
+            download
+        >
+            Download File
+        </a>
+
+    </div>
+
+</section>
 
     </main>
 
