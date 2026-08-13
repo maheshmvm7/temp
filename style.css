@@ -966,3 +966,287 @@ input[type="file"]::file-selector-button:hover {
     }
 
 }
+
+
+/* =====================================================
+   CONNECTION METHODS
+===================================================== */
+
+.connection-methods {
+    display: grid;
+
+    grid-template-columns: 1fr 1fr;
+
+    gap: 8px;
+
+    margin: 18px 0;
+}
+
+
+.connection-method {
+    padding: 10px;
+
+    background: var(--bg);
+
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius);
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 11px;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s ease,
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.connection-method:hover {
+    border-color: var(--accent);
+
+    color: var(--text);
+}
+
+
+.connection-method.active {
+    border-color: var(--accent);
+
+    background: rgba(0, 255, 204, 0.06);
+
+    color: var(--accent);
+}
+
+
+/* =====================================================
+   QR DISPLAY
+===================================================== */
+
+.qr-display {
+    margin-top: 18px;
+
+    padding: 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    background: var(--bg);
+
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius);
+}
+
+
+.receiver-qr {
+    width: 220px;
+    height: 220px;
+
+    padding: 8px;
+
+    background: #ffffff;
+
+    border-radius: 8px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.receiver-qr img,
+.receiver-qr canvas {
+    display: block;
+
+    max-width: 100%;
+    max-height: 100%;
+}
+
+
+.qr-display p {
+    margin-top: 14px;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+
+    line-height: 1.6;
+
+    text-align: center;
+}
+
+
+/* =====================================================
+   SCANNER
+===================================================== */
+
+.scanner-section {
+    margin-top: 12px;
+
+    padding: 16px;
+
+    background: var(--bg);
+
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius);
+}
+
+
+#qr-reader {
+    width: 100%;
+
+    max-width: 400px;
+
+    margin: 0 auto;
+
+    overflow: hidden;
+
+    border-radius: var(--radius);
+}
+
+
+#qr-reader video {
+    width: 100% !important;
+
+    height: auto !important;
+
+    border-radius: var(--radius);
+}
+
+
+#qr-reader__dashboard {
+    margin-top: 10px;
+}
+
+
+#qr-reader__dashboard_section_swaplink {
+    color: var(--accent) !important;
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 11px;
+}
+
+
+#qr-reader__dashboard_section_csr {
+    color: var(--muted);
+}
+
+
+#qr-reader__status_span {
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+}
+
+
+.scanner-help {
+    margin: 12px 0;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+
+    line-height: 1.6;
+
+    text-align: center;
+}
+
+
+/* =====================================================
+   RECEIVER TRANSFER
+===================================================== */
+
+.receiver-transfer {
+    margin-top: 20px;
+
+    padding-top: 20px;
+
+    border-top: 1px solid var(--border);
+}
+
+
+.received-size {
+    margin-top: 8px;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+}
+
+
+/* =====================================================
+   DOWNLOAD
+===================================================== */
+
+.download-box {
+    margin-top: 16px;
+
+    padding: 14px;
+
+    background: var(--bg);
+
+    border: 1px solid var(--accent);
+
+    border-radius: var(--radius);
+}
+
+
+.download-name {
+    color: var(--text);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+    word-break: break-word;
+}
+
+
+.download-size {
+    margin-top: 5px;
+
+    margin-bottom: 12px;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 500px) {
+
+    .connection-methods {
+        grid-template-columns: 1fr 1fr;
+    }
+
+
+    .receiver-qr {
+        width: 200px;
+        height: 200px;
+    }
+
+}

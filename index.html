@@ -1,13 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>P2P File Transfer</title>
 
     <!-- PeerJS -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script
+        src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"
+    ></script>
+
+    <!-- QR Generator -->
+    <script
+        src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
+    ></script>
+
+    <!-- QR Scanner -->
+    <script
+        src="https://unpkg.com/html5-qrcode"
+    ></script>
 
     <!-- Fonts -->
     <link
@@ -15,14 +32,19 @@
         rel="stylesheet"
     >
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
+
 
 <body>
 
     <header>
+
         <div class="badge">
-            WebRTC · P2P · FILE TRANSFER
+            WEBRTC · P2P · FILE TRANSFER
         </div>
 
         <h1>
@@ -32,35 +54,56 @@
         <p>
             browser → browser · direct data channel
         </p>
+
     </header>
 
 
     <!-- STEP INDICATOR -->
 
     <div class="steps">
-        <div class="step active" id="step1"></div>
-        <div class="step" id="step2"></div>
-        <div class="step" id="step3"></div>
+
+        <div
+            class="step active"
+            id="step1"
+        ></div>
+
+        <div
+            class="step"
+            id="step2"
+        ></div>
+
+        <div
+            class="step"
+            id="step3"
+        ></div>
+
     </div>
 
 
-    <!-- MODE SELECT -->
+    <!-- =================================================
+         MODE SELECT
+    ================================================== -->
 
     <div id="modeSelect">
 
         <div class="card">
 
             <div class="card-title">
-                Select device mode
+                SELECT MODE
             </div>
+
 
             <div class="mode-grid">
 
                 <button
                     class="mode-btn"
-                    onclick="selectMode('sender')"
+                    id="senderModeBtn"
+                    type="button"
                 >
-                    <span class="icon">↑</span>
+
+                    <span class="icon">
+                        ↑
+                    </span>
 
                     <span>
                         Sender
@@ -71,14 +114,19 @@
                         <br>
                         to another device
                     </span>
+
                 </button>
 
 
                 <button
                     class="mode-btn"
-                    onclick="selectMode('receiver')"
+                    id="receiverModeBtn"
+                    type="button"
                 >
-                    <span class="icon">↓</span>
+
+                    <span class="icon">
+                        ↓
+                    </span>
 
                     <span>
                         Receiver
@@ -89,6 +137,7 @@
                         <br>
                         from another device
                     </span>
+
                 </button>
 
             </div>
@@ -108,27 +157,27 @@
 
                     <div class="flow-step">
                         <span class="num">1</span>
-                        Receiver opens the page
+                        Receiver creates a Peer ID
                     </div>
 
                     <div class="flow-step">
                         <span class="num">2</span>
-                        Receiver gets a Peer ID
+                        Receiver displays the Peer ID as QR
                     </div>
 
                     <div class="flow-step">
                         <span class="num">3</span>
-                        Sender enters the Peer ID
+                        Sender scans the QR code
                     </div>
 
                     <div class="flow-step">
                         <span class="num">4</span>
-                        WebRTC data connection is established
+                        WebRTC DataChannel connects
                     </div>
 
                     <div class="flow-step">
                         <span class="num">5</span>
-                        File is transferred directly
+                        File transfers directly
                     </div>
 
                 </div>
@@ -140,7 +189,9 @@
     </div>
 
 
-    <!-- SENDER -->
+    <!-- =================================================
+         SENDER
+    ================================================== -->
 
     <div
         id="senderSection"
@@ -149,7 +200,8 @@
 
         <button
             class="back-btn"
-            onclick="goBack()"
+            id="senderBackBtn"
+            type="button"
         >
             ← back
         </button>
@@ -158,60 +210,130 @@
         <div class="card">
 
             <div class="card-title">
-                Sender
+                SENDER
             </div>
 
+
             <p class="description">
-                Enter the Peer ID shown on the
-                <strong>Receiver's</strong>
-                device.
+                Connect to the receiver using their
+                Peer ID or QR code.
             </p>
 
 
-            <label class="input-label">
-                RECEIVER PEER ID
-            </label>
+            <!-- CONNECTION METHOD -->
 
-            <div class="input-wrap">
+            <div class="connection-methods">
 
-                <input
-                    type="text"
-                    id="remoteIdInput"
-                    placeholder="paste-peer-id-here"
-                    autocomplete="off"
+                <button
+                    class="connection-method active"
+                    id="manualMethodBtn"
+                    type="button"
                 >
+                    Enter ID
+                </button>
+
+                <button
+                    class="connection-method"
+                    id="scanMethodBtn"
+                    type="button"
+                >
+                    Scan QR
+                </button>
 
             </div>
 
 
-            <!-- STATUS -->
+            <!-- MANUAL ID -->
+
+            <div id="manualConnection">
+
+                <label
+                    class="input-label"
+                    for="remoteIdInput"
+                >
+                    RECEIVER PEER ID
+                </label>
+
+
+                <div class="input-wrap">
+
+                    <input
+                        type="text"
+                        id="remoteIdInput"
+                        placeholder="paste-peer-id-here"
+                        autocomplete="off"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- QR SCANNER -->
+
+            <div
+                id="scannerSection"
+                class="scanner-section hidden"
+            >
+
+                <div
+                    id="qr-reader"
+                ></div>
+
+
+                <p
+                    class="scanner-help"
+                    id="scannerHelp"
+                >
+                    Allow camera access and point it at
+                    the Receiver's QR code.
+                </p>
+
+
+                <button
+                    class="btn btn-ghost"
+                    id="stopScannerBtn"
+                    type="button"
+                >
+                    Stop Scanner
+                </button>
+
+            </div>
+
+
+            <!-- CONNECTION STATUS -->
 
             <div
                 id="senderStatus"
-                class="status-bar info hidden"
+                class="status-bar info"
             >
 
                 <span class="dot pulse"></span>
 
                 <span id="senderStatusText">
-                    Waiting...
+                    Enter or scan a Receiver ID.
                 </span>
 
             </div>
 
 
-            <!-- FILE INPUT -->
+            <!-- FILE -->
 
             <div class="file-section">
 
-                <label class="input-label">
+                <label
+                    class="input-label"
+                    for="fileInput"
+                >
                     SELECT FILE
                 </label>
+
 
                 <input
                     type="file"
                     id="fileInput"
                 >
+
 
                 <div
                     id="selectedFileInfo"
@@ -238,6 +360,7 @@
 
                     </div>
 
+
                     <div class="progress-track">
 
                         <div
@@ -253,6 +376,7 @@
                 <button
                     id="sendFileBtn"
                     class="btn btn-primary"
+                    type="button"
                     disabled
                 >
                     Send File
@@ -265,7 +389,9 @@
     </div>
 
 
-    <!-- RECEIVER -->
+    <!-- =================================================
+         RECEIVER
+    ================================================== -->
 
     <div
         id="receiverSection"
@@ -274,7 +400,8 @@
 
         <button
             class="back-btn"
-            onclick="goBack()"
+            id="receiverBackBtn"
+            type="button"
         >
             ← back
         </button>
@@ -283,12 +410,13 @@
         <div class="card">
 
             <div class="card-title">
-                Receiver
+                RECEIVER
             </div>
 
+
             <p class="description">
-                Share this Peer ID with the
-                <strong>Sender</strong>.
+                Share your Peer ID or show the QR code
+                to the Sender.
             </p>
 
 
@@ -303,12 +431,55 @@
                     generating...
                 </code>
 
+
                 <button
                     class="copy-btn"
-                    onclick="copyId()"
+                    id="copyIdBtn"
+                    type="button"
                     title="Copy Peer ID"
                 >
                     📋
+                </button>
+
+            </div>
+
+
+            <!-- QR BUTTON -->
+
+            <button
+                class="btn btn-primary"
+                id="showQrBtn"
+                type="button"
+            >
+                Show QR Code
+            </button>
+
+
+            <!-- QR DISPLAY -->
+
+            <div
+                id="qrDisplay"
+                class="qr-display hidden"
+            >
+
+                <div
+                    id="receiverQr"
+                    class="receiver-qr"
+                ></div>
+
+
+                <p>
+                    Scan this QR code from the Sender
+                    device.
+                </p>
+
+
+                <button
+                    class="btn btn-ghost"
+                    id="hideQrBtn"
+                    type="button"
+                >
+                    Hide QR
                 </button>
 
             </div>
@@ -330,14 +501,18 @@
             </div>
 
 
-            <!-- RECEIVING PROGRESS WILL BE CREATED BY JS -->
+            <!-- RECEIVER TRANSFER UI IS CREATED BY JS -->
 
         </div>
 
     </div>
 
 
-    <script src="script.js" defer></script>
+    <script
+        src="script.js"
+        defer
+    ></script>
 
 </body>
+
 </html>
