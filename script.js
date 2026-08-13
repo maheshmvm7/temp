@@ -22,6 +22,14 @@ const connectionResult =
 const connectedPeer =
     document.getElementById("connected-peer");
 
+const peerIdInput =
+    document.getElementById("peer-id-input");
+
+const connectPeerBtn =
+    document.getElementById("connect-peer-btn");
+
+const copyPeerIdBtn =
+    document.getElementById("copy-peer-id");
 
 /* =========================================================
    FILE TRANSFER ELEMENTS
@@ -1732,6 +1740,202 @@ window.addEventListener(
     }
 );
 
+
+/* =========================================================
+   COPY PEER ID
+========================================================= */
+
+copyPeerIdBtn.addEventListener(
+    "click",
+    async () => {
+
+        const id =
+            peerIdElement.textContent.trim();
+
+
+        if (
+            !id ||
+            id === "Connecting..."
+        ) {
+
+            return;
+        }
+
+
+        try {
+
+            await navigator.clipboard.writeText(
+                id
+            );
+
+
+            const originalText =
+                copyPeerIdBtn.textContent;
+
+
+            copyPeerIdBtn.textContent =
+                "Copied";
+
+
+            setTimeout(() => {
+
+                copyPeerIdBtn.textContent =
+                    originalText;
+
+            }, 1500);
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Copy failed:",
+                error
+            );
+        }
+    }
+);
+
+/* =========================================================
+   CONNECT USING PEER ID
+========================================================= */
+
+connectPeerBtn.addEventListener(
+    "click",
+    connectUsingPeerId
+);
+
+
+peerIdInput.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (
+            event.key === "Enter"
+        ) {
+
+            connectUsingPeerId();
+        }
+    }
+);
+
+
+function connectUsingPeerId() {
+
+    if (
+        !peer ||
+        !peer.id
+    ) {
+
+        scannerMessage.textContent =
+            "Peer is not ready yet.";
+
+        return;
+    }
+
+
+    const remotePeerId =
+        peerIdInput.value.trim();
+
+
+    if (!remotePeerId) {
+
+        scannerMessage.textContent =
+            "Enter a Peer ID.";
+
+        return;
+    }
+
+
+    if (
+        remotePeerId === peer.id
+    ) {
+
+        scannerMessage.textContent =
+            "You cannot connect to yourself.";
+
+        return;
+    }
+
+
+    if (
+        connection &&
+        connection.open
+    ) {
+
+        scannerMessage.textContent =
+            "Already connected.";
+
+        return;
+    }
+
+
+    console.log(
+        "Connecting manually to:",
+        remotePeerId
+    );
+
+
+    scannerMessage.textContent =
+        "Connecting to peer...";
+
+
+    connectPeerBtn.disabled =
+        true;
+
+
+    try {
+
+        const conn =
+            peer.connect(
+                remotePeerId,
+                {
+                    reliable: true
+                }
+            );
+
+
+        setupConnection(conn);
+
+
+        /*
+            setupConnection() handles
+            the open/error/close events.
+        */
+
+        conn.on("open", () => {
+
+            connectPeerBtn.disabled =
+                false;
+
+            peerIdInput.value = "";
+
+        });
+
+
+        conn.on("error", () => {
+
+            connectPeerBtn.disabled =
+                false;
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Manual connection error:",
+            error
+        );
+
+
+        scannerMessage.textContent =
+            "Unable to connect.";
+
+        connectPeerBtn.disabled =
+            false;
+    }
+}
 
 /* =========================================================
    START APPLICATION

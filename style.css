@@ -456,3 +456,93 @@ h1 {
 
     font-size: 12px;
 }
+
+
+/* copy and paste peer id */
+.peer-id-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+#copy-peer-id {
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--text);
+
+    padding: 6px 10px;
+
+    font-size: 10px;
+
+    cursor: pointer;
+}
+
+#copy-peer-id:hover {
+    background: #f0efeb;
+}
+
+.peer-id-input {
+    width: min(100%, 420px);
+
+    display: flex;
+
+    gap: 8px;
+
+    margin-top: 18px;
+}
+
+#peer-id-input {
+    flex: 1;
+
+    min-width: 0;
+
+    padding: 11px 13px;
+
+    border: 1px solid var(--border);
+
+    background: white;
+    color: var(--text);
+
+    outline: none;
+
+    font-family: monospace;
+    font-size: 12px;
+}
+
+#peer-id-input:focus {
+    border-color: var(--text);
+}
+
+#connect-peer-btn {
+    border: none;
+
+    padding: 11px 16px;
+
+    background: #111;
+    color: white;
+
+    cursor: pointer;
+
+    font-size: 11px;
+}
+
+#connect-peer-btn:hover {
+    opacity: 0.8;
+}
+
+#connect-peer-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+
+    .peer-id-input {
+        flex-direction: column;
+    }
+
+    #connect-peer-btn {
+        width: 100%;
+    }
+}
