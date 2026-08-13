@@ -1,8 +1,17 @@
+/* =========================================================
+   RESET
+========================================================= */
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
 
 :root {
     --bg: #f4f3ef;
@@ -10,7 +19,16 @@
     --muted: #777;
     --border: #d8d7d2;
     --accent: #111;
+
+    --success: #20a35a;
+    --success-bg: #f5fbf7;
+    --success-border: #b8d8c4;
 }
+
+
+/* =========================================================
+   BODY
+========================================================= */
 
 body {
     min-height: 100vh;
@@ -29,7 +47,9 @@ body {
 }
 
 
-/* APP */
+/* =========================================================
+   APP
+========================================================= */
 
 .app {
     width: min(100%, 900px);
@@ -42,7 +62,9 @@ body {
 }
 
 
-/* HEADER */
+/* =========================================================
+   HEADER
+========================================================= */
 
 .header {
     width: 100%;
@@ -52,11 +74,14 @@ body {
     align-items: center;
 }
 
+
 .logo {
     font-size: 18px;
     font-weight: 700;
+
     letter-spacing: -0.04em;
 }
+
 
 .status {
     display: flex;
@@ -65,8 +90,10 @@ body {
     gap: 8px;
 
     font-size: 12px;
+
     color: var(--muted);
 }
+
 
 #status-dot {
     width: 7px;
@@ -77,12 +104,15 @@ body {
     background: #aaa;
 }
 
+
 #status-dot.connected {
-    background: #20a35a;
+    background: var(--success);
 }
 
 
-/* CONNECTION */
+/* =========================================================
+   CONNECTION
+========================================================= */
 
 .connection {
     flex: 1;
@@ -97,7 +127,9 @@ body {
 }
 
 
-/* HEADING */
+/* =========================================================
+   HEADING
+========================================================= */
 
 .heading {
     max-width: 600px;
@@ -105,16 +137,19 @@ body {
     margin-bottom: 35px;
 }
 
+
 .eyebrow {
     display: block;
 
     margin-bottom: 12px;
 
     font-size: 11px;
+
     letter-spacing: 0.15em;
 
     color: var(--muted);
 }
+
 
 h1 {
     font-size: clamp(42px, 7vw, 76px);
@@ -126,29 +161,36 @@ h1 {
     font-weight: 500;
 }
 
+
 .heading p {
     margin-top: 20px;
 
     color: var(--muted);
 
     font-size: 14px;
+
     line-height: 1.6;
 }
 
 
-/* TOGGLE */
+/* =========================================================
+   CONNECTION TOGGLE
+========================================================= */
 
 .toggle-wrapper {
     display: flex;
 
     padding: 4px;
+
     margin-bottom: 30px;
 
     border: 1px solid var(--border);
+
     border-radius: 100px;
 
     background: #e9e8e3;
 }
+
 
 .toggle-option {
     border: none;
@@ -158,6 +200,7 @@ h1 {
     border-radius: 100px;
 
     background: transparent;
+
     color: var(--muted);
 
     font-size: 12px;
@@ -169,13 +212,17 @@ h1 {
         color 0.25s ease;
 }
 
+
 .toggle-option.active {
     background: var(--accent);
+
     color: white;
 }
 
 
-/* PANEL */
+/* =========================================================
+   PANEL
+========================================================= */
 
 .panel {
     width: 100%;
@@ -187,7 +234,9 @@ h1 {
 }
 
 
-/* QR */
+/* =========================================================
+   QR CODE
+========================================================= */
 
 .qr-container {
     width: 270px;
@@ -196,6 +245,7 @@ h1 {
     padding: 20px;
 
     display: flex;
+
     align-items: center;
     justify-content: center;
 
@@ -204,6 +254,7 @@ h1 {
     border: 1px solid var(--border);
 }
 
+
 #qrcode {
     display: flex;
 
@@ -211,13 +262,19 @@ h1 {
     justify-content: center;
 }
 
+
 #qrcode img,
 #qrcode canvas {
     display: block;
+
+    max-width: 100%;
+    max-height: 100%;
 }
 
 
-/* DEVICE ID */
+/* =========================================================
+   PEER ID
+========================================================= */
 
 .peer-info {
     display: flex;
@@ -228,6 +285,7 @@ h1 {
     gap: 6px;
 }
 
+
 .label {
     font-size: 10px;
 
@@ -236,14 +294,68 @@ h1 {
     color: var(--muted);
 }
 
-#peer-id {
-    font-family: monospace;
 
-    font-size: 14px;
+.peer-id-row {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    max-width: 100%;
 }
 
 
-/* HINT */
+#peer-id {
+    max-width: 310px;
+
+    font-family: monospace;
+
+    font-size: 14px;
+
+    word-break: break-all;
+}
+
+
+/* =========================================================
+   COPY PEER ID
+========================================================= */
+
+#copy-peer-id {
+    flex-shrink: 0;
+
+    border: 1px solid var(--border);
+
+    background: white;
+
+    color: var(--text);
+
+    padding: 6px 10px;
+
+    font-size: 10px;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        opacity 0.2s ease;
+}
+
+
+#copy-peer-id:hover {
+    background: #f0efeb;
+}
+
+
+#copy-peer-id:active {
+    opacity: 0.7;
+}
+
+
+/* =========================================================
+   HINT
+========================================================= */
 
 .hint {
     margin-top: 15px;
@@ -251,10 +363,14 @@ h1 {
     font-size: 12px;
 
     color: var(--muted);
+
+    line-height: 1.5;
 }
 
 
-/* SCANNER */
+/* =========================================================
+   QR SCANNER
+========================================================= */
 
 #reader {
     width: min(100%, 420px);
@@ -266,15 +382,27 @@ h1 {
     background: #000;
 }
 
+
 #reader video {
     width: 100% !important;
+
+    height: auto !important;
 
     display: block;
 }
 
+
+#reader img {
+    max-width: 100%;
+}
+
+
 #reader__dashboard {
     padding: 12px !important;
+
+    background: #fff;
 }
+
 
 #reader__dashboard_section_csr button {
     border: none;
@@ -284,10 +412,19 @@ h1 {
     border-radius: 5px;
 
     background: #111;
+
     color: white;
 
     cursor: pointer;
 }
+
+
+#reader__dashboard_section_swaplink {
+    color: #111 !important;
+
+    font-size: 11px;
+}
+
 
 .scanner-message {
     margin-top: 15px;
@@ -295,192 +432,14 @@ h1 {
     font-size: 12px;
 
     color: var(--muted);
+
+    line-height: 1.5;
 }
 
 
-/* CONNECTION RESULT */
-
-.connection-result {
-    width: min(100%, 420px);
-
-    margin-top: 25px;
-    padding: 18px;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 6px;
-
-    border: 1px solid #b8d8c4;
-
-    background: #f5fbf7;
-}
-
-.result-label {
-    font-size: 10px;
-
-    letter-spacing: 0.15em;
-
-    color: #20a35a;
-}
-
-#connected-peer {
-    font-family: monospace;
-
-    font-size: 14px;
-
-    word-break: break-all;
-}
-
-.result-status {
-    font-size: 11px;
-
-    color: var(--muted);
-}
-
-
-/* UTILITY */
-
-.hidden {
-    display: none !important;
-}
-
-
-/* MOBILE */
-
-@media (max-width: 600px) {
-
-    .app {
-        padding: 20px;
-    }
-
-    .qr-container {
-        width: 240px;
-        height: 240px;
-    }
-
-    .toggle-option {
-        padding: 9px 20px;
-    }
-}
-
-.file-transfer {
-    width: min(100%, 520px);
-    margin-top: 30px;
-}
-
-#file-input {
-    width: 100%;
-    margin-bottom: 15px;
-}
-
-#file-info {
-    margin-bottom: 15px;
-}
-
-#file-name {
-    font-size: 14px;
-    font-weight: 600;
-    word-break: break-all;
-}
-
-#file-size {
-    margin-top: 5px;
-    font-family: monospace;
-    font-size: 11px;
-    color: var(--muted);
-}
-
-#send-file-btn {
-    border: none;
-    padding: 10px 18px;
-
-    background: #111;
-    color: white;
-
-    cursor: pointer;
-}
-
-#send-file-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.progress-wrapper {
-    width: 100%;
-    height: 5px;
-
-    margin-top: 18px;
-
-    background: #e5e4df;
-}
-
-#transfer-progress {
-    width: 0%;
-    height: 100%;
-
-    background: #111;
-
-    transition: width 0.1s linear;
-}
-
-#transfer-status {
-    margin-top: 10px;
-
-    font-size: 11px;
-    color: var(--muted);
-}
-
-#received-file {
-    margin-top: 20px;
-    padding: 15px;
-
-    border: 1px solid #b8d8c4;
-    background: #f5fbf7;
-}
-
-#received-file-name {
-    word-break: break-all;
-}
-
-#download-file {
-    display: inline-block;
-
-    margin-top: 12px;
-    padding: 8px 14px;
-
-    background: #111;
-    color: white;
-
-    text-decoration: none;
-
-    font-size: 12px;
-}
-
-
-/* copy and paste peer id */
-.peer-id-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-#copy-peer-id {
-    border: 1px solid var(--border);
-    background: white;
-    color: var(--text);
-
-    padding: 6px 10px;
-
-    font-size: 10px;
-
-    cursor: pointer;
-}
-
-#copy-peer-id:hover {
-    background: #f0efeb;
-}
+/* =========================================================
+   MANUAL PEER ID
+========================================================= */
 
 .peer-id-input {
     width: min(100%, 420px);
@@ -492,6 +451,7 @@ h1 {
     margin-top: 18px;
 }
 
+
 #peer-id-input {
     flex: 1;
 
@@ -502,47 +462,627 @@ h1 {
     border: 1px solid var(--border);
 
     background: white;
+
     color: var(--text);
 
     outline: none;
 
     font-family: monospace;
+
     font-size: 12px;
+
+    transition:
+        border-color 0.2s ease;
 }
+
 
 #peer-id-input:focus {
     border-color: var(--text);
 }
 
+
+#peer-id-input::placeholder {
+    color: #aaa;
+}
+
+
 #connect-peer-btn {
+    flex-shrink: 0;
+
     border: none;
 
     padding: 11px 16px;
 
     background: #111;
+
     color: white;
 
     cursor: pointer;
 
     font-size: 11px;
+
+    transition:
+        opacity 0.2s ease;
 }
 
-#connect-peer-btn:hover {
+
+#connect-peer-btn:hover:not(:disabled) {
     opacity: 0.8;
 }
 
+
 #connect-peer-btn:disabled {
     opacity: 0.4;
+
     cursor: not-allowed;
 }
 
+
+/* =========================================================
+   CONNECTION RESULT
+========================================================= */
+
+.connection-result {
+    width: min(100%, 420px);
+
+    margin-top: 25px;
+
+    padding: 18px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+    border: 1px solid var(--success-border);
+
+    background: var(--success-bg);
+
+    text-align: left;
+}
+
+
+.result-label {
+    font-size: 10px;
+
+    letter-spacing: 0.15em;
+
+    color: var(--success);
+}
+
+
+#connected-peer {
+    font-family: monospace;
+
+    font-size: 14px;
+
+    word-break: break-all;
+}
+
+
+.result-status {
+    font-size: 11px;
+
+    color: var(--muted);
+}
+
+
+/* =========================================================
+   UTILITY
+========================================================= */
+
+.hidden {
+    display: none !important;
+}
+
+
+/* =========================================================
+   FILE TRANSFER
+========================================================= */
+
+.file-transfer {
+    width: min(100%, 520px);
+
+    margin-top: 30px;
+
+    padding: 22px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: stretch;
+
+    text-align: left;
+
+    border: 1px solid var(--border);
+
+    background: rgba(255, 255, 255, 0.65);
+}
+
+
+/* =========================================================
+   FILE INPUT
+========================================================= */
+
+#file-input {
+    width: 100%;
+
+    padding: 14px;
+
+    margin: 0 0 18px;
+
+    border: 1px dashed var(--border);
+
+    background: #fafaf8;
+
+    color: var(--text);
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    outline: none;
+}
+
+
+#file-input:hover {
+    border-color: #999;
+
+    background: #f7f7f4;
+}
+
+
+#file-input::file-selector-button {
+    margin-right: 12px;
+
+    padding: 8px 12px;
+
+    border: none;
+
+    background: #111;
+
+    color: white;
+
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+#file-input::file-selector-button:hover {
+    opacity: 0.8;
+}
+
+
+/* =========================================================
+   FILE INFORMATION
+========================================================= */
+
+#file-info {
+    width: 100%;
+
+    margin-bottom: 16px;
+
+    padding-bottom: 14px;
+
+    border-bottom: 1px solid var(--border);
+}
+
+
+#file-name {
+    font-size: 13px;
+
+    font-weight: 600;
+
+    line-height: 1.5;
+
+    word-break: break-word;
+}
+
+
+#file-size {
+    margin-top: 5px;
+
+    font-family: monospace;
+
+    font-size: 10px;
+
+    color: var(--muted);
+}
+
+
+/* =========================================================
+   SEND FILE BUTTON
+========================================================= */
+
+#send-file-btn {
+    width: 100%;
+
+    min-height: 42px;
+
+    border: none;
+
+    background: #111;
+
+    color: white;
+
+    font-size: 11px;
+
+    letter-spacing: 0.04em;
+
+    cursor: pointer;
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.15s ease;
+}
+
+
+#send-file-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+
+#send-file-btn:active:not(:disabled) {
+    transform: scale(0.99);
+}
+
+
+#send-file-btn:disabled {
+    opacity: 0.35;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   TRANSFER PROGRESS
+========================================================= */
+
+.progress-wrapper {
+    width: 100%;
+
+    height: 4px;
+
+    margin-top: 20px;
+
+    overflow: hidden;
+
+    background: #e3e2dd;
+}
+
+
+#transfer-progress {
+    width: 0%;
+
+    height: 100%;
+
+    background: #111;
+
+    transition:
+        width 0.15s linear;
+}
+
+
+/* =========================================================
+   TRANSFER STATUS
+========================================================= */
+
+#transfer-status {
+    width: 100%;
+
+    min-height: 18px;
+
+    margin-top: 10px;
+
+    font-family: monospace;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+
+    color: var(--muted);
+
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   RECEIVED FILE
+========================================================= */
+
+#received-file {
+    width: 100%;
+
+    margin-top: 20px;
+
+    padding: 15px;
+
+    border: 1px solid var(--success-border);
+
+    background: var(--success-bg);
+
+    text-align: left;
+}
+
+
+#received-file > div:first-child {
+    font-size: 10px;
+
+    color: var(--muted);
+
+    margin-bottom: 4px;
+}
+
+
+#received-file-name {
+    display: block;
+
+    font-family: monospace;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+
+    word-break: break-all;
+}
+
+
+/* =========================================================
+   DOWNLOAD BUTTON
+========================================================= */
+
+#download-file {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    margin-top: 12px;
+
+    padding: 8px 14px;
+
+    background: #111;
+
+    color: white;
+
+    text-decoration: none;
+
+    font-size: 10px;
+
+    transition:
+        opacity 0.2s ease;
+}
+
+
+#download-file:hover {
+    opacity: 0.8;
+}
+
+
+/* =========================================================
+   MULTIPLE RECEIVED FILES
+========================================================= */
+
+.received-file-item {
+    width: 100%;
+
+    margin-top: 10px;
+
+    padding: 13px 15px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    border: 1px solid var(--border);
+
+    background: white;
+
+    text-align: left;
+
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.received-file-item:hover {
+    border-color: #bbb;
+
+    background: #fafaf8;
+}
+
+
+.received-file-item > div {
+    flex: 1;
+
+    min-width: 0;
+
+    font-family: monospace;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+
+    word-break: break-all;
+}
+
+
+.received-file-item a {
+    flex-shrink: 0;
+
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 7px 11px;
+
+    background: #111;
+
+    color: white;
+
+    text-decoration: none;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+
+    transition:
+        opacity 0.2s ease;
+}
+
+
+.received-file-item a:hover {
+    opacity: 0.8;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media (max-width: 600px) {
 
+    body {
+        align-items: flex-start;
+    }
+
+
+    .app {
+        width: 100%;
+
+        padding: 20px;
+    }
+
+
+    .connection {
+        justify-content: flex-start;
+
+        padding-top: 60px;
+    }
+
+
+    .heading {
+        margin-bottom: 28px;
+    }
+
+
+    h1 {
+        font-size: clamp(
+            40px,
+            13vw,
+            60px
+        );
+    }
+
+
+    .qr-container {
+        width: 240px;
+        height: 240px;
+    }
+
+
+    .toggle-option {
+        padding: 9px 20px;
+    }
+
+
+    .peer-id-row {
+        max-width: 100%;
+    }
+
+
+    #peer-id {
+        max-width: 220px;
+
+        font-size: 12px;
+    }
+
+
     .peer-id-input {
+        width: 100%;
+
         flex-direction: column;
     }
 
+
     #connect-peer-btn {
         width: 100%;
+    }
+
+
+    .file-transfer {
+        width: 100%;
+
+        margin-top: 25px;
+
+        padding: 16px;
+    }
+
+
+    #file-input {
+        padding: 12px;
+    }
+
+
+    .received-file-item {
+        align-items: stretch;
+
+        flex-direction: column;
+
+        gap: 10px;
+    }
+
+
+    .received-file-item a {
+        width: 100%;
+
+        text-align: center;
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
+
+@media (max-width: 380px) {
+
+    .app {
+        padding: 15px;
+    }
+
+
+    .connection {
+        padding-top: 40px;
+    }
+
+
+    .qr-container {
+        width: 220px;
+        height: 220px;
+    }
+
+
+    .file-transfer {
+        padding: 14px;
+    }
+
+
+    #file-name {
+        font-size: 12px;
     }
 }
