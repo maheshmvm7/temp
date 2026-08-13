@@ -7,6 +7,7 @@ let receivingFile = null;
 let receivedChunks = [];
 let receivedBytes = 0;
 
+let receivedFiles = [];
 let qrScanner = null;
 let scannerRunning = false;
 
@@ -738,44 +739,65 @@ async function stopScanner() {
 
 function selectFile(event) {
 
-    selectedFile =
-        event.target.files[0];
+    selectedFiles = Array.from(event.target.files);
 
-
-    if (!selectedFile) {
+    if (selectedFiles.length === 0) {
         return;
     }
 
-
     const info =
-        document.getElementById(
-            "selectedFileInfo"
-        );
+        document.getElementById("selectedFileInfo");
 
+    info.style.display = "block";
 
-    info.style.display =
-        "block";
+    let totalSize = 0;
 
-
-    info.innerHTML = `
-        <strong style="color:var(--text)">
-            ${escapeHTML(selectedFile.name)}
-        </strong>
-        <br>
-        Size:
-        ${formatBytes(selectedFile.size)}
+    let html = `
+        <div class="file-list">
     `;
 
+    selectedFiles.forEach((file, index) => {
 
-    document
-        .getElementById("sendFileBtn")
-        .disabled = false;
+        totalSize += file.size;
 
+        html += `
+            <div class="file-item">
+
+                <span class="file-number">
+                    ${index + 1}
+                </span>
+
+                <span class="file-name">
+                    ${escapeHTML(file.name)}
+                </span>
+
+                <span class="file-size">
+                    ${formatBytes(file.size)}
+                </span>
+
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+
+        <div class="file-summary">
+            ${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""}
+            · ${formatBytes(totalSize)}
+        </div>
+    `;
+
+    info.innerHTML = html;
+
+    document.getElementById(
+        "sendFileBtn"
+    ).disabled = false;
 
     setStatus(
         "sender",
         "info",
-        "File selected."
+        `${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""} selected.`
     );
 }
 
@@ -786,24 +808,22 @@ function selectFile(event) {
 
 async function sendFile() {
 
-    if (!selectedFile) {
+    if (selectedFiles.length === 0) {
 
         setStatus(
             "sender",
             "error",
-            "Select a file first."
+            "Select at least one file."
         );
 
         return;
     }
-
 
     const remoteId =
         document
             .getElementById("remoteIdInput")
             .value
             .trim();
-
 
     if (!remoteId) {
 
@@ -816,7 +836,6 @@ async function sendFile() {
         return;
     }
 
-
     if (!peer || peer.destroyed) {
 
         setStatus(
@@ -828,15 +847,12 @@ async function sendFile() {
         return;
     }
 
-
     const button =
         document.getElementById(
             "sendFileBtn"
         );
 
-
     button.disabled = true;
-
 
     try {
 
@@ -846,15 +862,12 @@ async function sendFile() {
             "Connecting to receiver..."
         );
 
-
-        conn =
-            peer.connect(
-                remoteId,
-                {
-                    reliable: true
-                }
-            );
-
+        conn = peer.connect(
+            remoteId,
+            {
+                reliable: true
+            }
+        );
 
         conn.on("open", async () => {
 
@@ -862,47 +875,65 @@ async function sendFile() {
                 "DataConnection opened."
             );
 
-
-            setStatus(
-                "sender",
-                "success",
-                "Connected. Starting transfer..."
-            );
-
-
             try {
 
-                await transferFile(
-                    selectedFile
+                /*
+                 * Send every selected file
+                 * through the same connection.
+                 */
+
+                for (
+                    let i = 0;
+                    i < selectedFiles.length;
+                    i++
+                ) {
+
+                    const file =
+                        selectedFiles[i];
+
+                    setStatus(
+                        "sender",
+                        "info",
+                        `Sending file ${i + 1} of ${selectedFiles.length}: ${file.name}`
+                    );
+
+                    await transferFile(
+                        file,
+                        i,
+                        selectedFiles.length
+                    );
+                }
+
+                setStatus(
+                    "sender",
+                    "success",
+                    `${selectedFiles.length} file${selectedFiles.length > 1 ? "s" : ""} sent successfully.`
                 );
 
             } catch (error) {
 
                 console.error(
+                    "Transfer error:",
                     error
                 );
-
 
                 setStatus(
                     "sender",
                     "error",
-                    "Transfer failed."
+                    "Transfer failed: " +
+                    error.message
                 );
-
             }
 
-
             button.disabled = false;
-
         });
-
 
         conn.on("error", error => {
 
             console.error(
+                "Connection error:",
                 error
             );
-
 
             setStatus(
                 "sender",
@@ -910,9 +941,7 @@ async function sendFile() {
                 "Connection error."
             );
 
-
             button.disabled = false;
-
         });
 
     } catch (error) {
@@ -921,13 +950,11 @@ async function sendFile() {
             error
         );
 
-
         setStatus(
             "sender",
             "error",
             error.message
         );
-
 
         button.disabled = false;
     }
@@ -938,32 +965,36 @@ async function sendFile() {
    TRANSFER FILE
 ===================================================== */
 
-async function transferFile(file) {
+async function transferFile(
+    file,
+    fileIndex,
+    totalFiles
+) {
 
     const progressContainer =
         document.getElementById(
             "transferProgressContainer"
         );
 
-
     const progress =
         document.getElementById(
             "transferProgress"
         );
-
 
     const percent =
         document.getElementById(
             "transferPercent"
         );
 
-
     progressContainer.style.display =
         "block";
 
+    progress.style.width = "0%";
+    percent.textContent = "0%";
+
 
     /*
-     * FILE START
+     * Tell receiver a new file is starting.
      */
 
     conn.send({
@@ -976,7 +1007,11 @@ async function transferFile(file) {
 
         mime:
             file.type ||
-            "application/octet-stream"
+            "application/octet-stream",
+
+        fileIndex: fileIndex,
+
+        totalFiles: totalFiles
 
     });
 
@@ -1022,7 +1057,6 @@ async function transferFile(file) {
         progress.style.width =
             percentage + "%";
 
-
         percent.textContent =
             percentage + "%";
 
@@ -1030,9 +1064,7 @@ async function transferFile(file) {
         setStatus(
             "sender",
             "info",
-            "Sending " +
-            percentage +
-            "%"
+            `File ${fileIndex + 1}/${totalFiles} — ${percentage}%`
         );
 
 
@@ -1044,12 +1076,16 @@ async function transferFile(file) {
 
 
     /*
-     * FILE END
+     * Tell receiver this file is finished.
      */
 
     conn.send({
 
-        type: "file-end"
+        type: "file-end",
+
+        fileIndex: fileIndex,
+
+        totalFiles: totalFiles
 
     });
 
@@ -1057,33 +1093,12 @@ async function transferFile(file) {
     progress.style.width =
         "100%";
 
-
     percent.textContent =
         "100%";
 
 
-    setStatus(
-        "sender",
-        "success",
-        "File sent successfully."
-    );
-
-
-    document
-        .getElementById("step2")
-        .classList.remove("active");
-
-
-    document
-        .getElementById("step2")
-        .classList.add("done");
-
-
-    document
-        .getElementById("step3")
-        .classList.add("active");
+    await sleep(100);
 }
-
 
 /* =====================================================
    BUFFER
@@ -1244,27 +1259,28 @@ function startReceiving(data) {
 
         mime:
             data.mime ||
-            "application/octet-stream"
+            "application/octet-stream",
+
+        fileIndex:
+            data.fileIndex,
+
+        totalFiles:
+            data.totalFiles
 
     };
-
 
     receivedChunks = [];
 
     receivedBytes = 0;
 
-
     createReceiverUI();
 
-
     updateReceiveProgress();
-
 
     setStatus(
         "receiver",
         "info",
-        "Receiving " +
-        data.name
+        `Receiving file ${data.fileIndex + 1} of ${data.totalFiles}: ${data.name}`
     );
 }
 
@@ -1333,37 +1349,156 @@ function finishReceiving() {
 
 
     const url =
-        URL.createObjectURL(
-            blob
-        );
+        URL.createObjectURL(blob);
 
 
-    showDownload(
-        url,
-        receivingFile.name,
-        blob.size
+    /*
+     * Store the completed file.
+     */
+
+    receivedFiles.push({
+
+        name:
+            receivingFile.name,
+
+        size:
+            blob.size,
+
+        url:
+            url,
+
+        index:
+            receivingFile.fileIndex
+
+    });
+
+
+    /*
+     * Add download button for this file.
+     */
+
+    addReceivedFile(
+        receivingFile,
+        blob.size,
+        url
     );
 
 
-    updateReceiveProgress(
-        100
-    );
+    const currentFile =
+        receivingFile.fileIndex + 1;
+
+    const totalFiles =
+        receivingFile.totalFiles;
 
 
     setStatus(
         "receiver",
         "success",
-        "File received successfully."
+        `File ${currentFile} of ${totalFiles} received.`
     );
 
+
+    /*
+     * Reset current file.
+     */
 
     receivedChunks = [];
 
     receivedBytes = 0;
 
     receivingFile = null;
+
+
+    /*
+     * Hide/reset progress if more files
+     * are going to arrive.
+     */
+
+    if (currentFile < totalFiles) {
+
+        const progress =
+            document.getElementById(
+                "receiveProgress"
+            );
+
+        const percent =
+            document.getElementById(
+                "receivePercent"
+            );
+
+        if (progress) {
+            progress.style.width = "0%";
+        }
+
+        if (percent) {
+            percent.textContent = "0%";
+        }
+    } else {
+
+        document
+            .getElementById("step3")
+            .classList.add("done");
+
+        setStatus(
+            "receiver",
+            "success",
+            `All ${totalFiles} files received successfully.`
+        );
+    }
 }
 
+
+function addReceivedFile(
+    file,
+    size,
+    url
+) {
+
+    const area =
+        document.getElementById(
+            "downloadArea"
+        );
+
+
+    if (!area) {
+        return;
+    }
+
+
+    const item =
+        document.createElement("div");
+
+    item.className =
+        "download-box";
+
+
+    item.innerHTML = `
+
+        <div class="download-index">
+            FILE ${file.fileIndex + 1}
+        </div>
+
+        <div class="download-name">
+            ${escapeHTML(file.name)}
+        </div>
+
+        <div class="download-size">
+            ${formatBytes(size)}
+        </div>
+
+        <a
+            class="btn btn-primary"
+            href="${url}"
+            download="${escapeHTML(file.name)}"
+        >
+            Download
+        </a>
+
+    `;
+
+
+    area.appendChild(item);
+}
 
 /* =====================================================
    RECEIVER UI

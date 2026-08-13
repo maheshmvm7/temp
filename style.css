@@ -1250,3 +1250,111 @@ input[type="file"]::file-selector-button:hover {
     }
 
 }
+
+
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+
+.file-item {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 8px 10px;
+
+    border-bottom: 1px solid var(--border);
+
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+}
+
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+
+.file-number {
+    color: var(--accent);
+}
+
+
+.file-name {
+    color: var(--text);
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.file-size {
+    color: var(--muted);
+
+    white-space: nowrap;
+}
+
+
+.file-summary {
+    margin-top: 10px;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+}
+
+
+.download-box {
+    margin-top: 10px;
+
+    padding: 14px;
+
+    background: var(--bg);
+
+    border: 1px solid var(--border);
+
+    border-radius: var(--radius);
+}
+
+
+.download-index {
+    margin-bottom: 5px;
+
+    color: var(--accent);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 9px;
+
+    letter-spacing: 1px;
+}
+
+
+.download-name {
+    color: var(--text);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 12px;
+
+    word-break: break-word;
+}
+
+
+.download-size {
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-family: "JetBrains Mono", monospace;
+
+    font-size: 10px;
+}
