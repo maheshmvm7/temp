@@ -1086,3 +1086,262 @@ h1 {
         font-size: 12px;
     }
 }
+
+
+/* =========================================================
+   STARTUP SCREEN
+========================================================= */
+
+#startup-screen {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 99999;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 25px;
+
+    background: var(--bg);
+}
+
+
+.startup-box {
+    width: min(100%, 480px);
+
+    padding: 35px;
+
+    border: 1px solid var(--border);
+
+    background: rgba(255, 255, 255, 0.75);
+
+    text-align: left;
+}
+
+
+.startup-label {
+    margin-bottom: 15px;
+
+    font-size: 10px;
+
+    letter-spacing: 0.15em;
+
+    color: var(--muted);
+}
+
+
+.startup-box h1 {
+    font-size: 48px;
+
+    line-height: 1;
+
+    letter-spacing: -0.06em;
+
+    font-weight: 500;
+}
+
+
+.startup-box > p {
+    margin-top: 15px;
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   STARTUP FIELD
+========================================================= */
+
+.startup-field {
+    margin-top: 25px;
+}
+
+
+.startup-field label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    font-size: 10px;
+
+    letter-spacing: 0.12em;
+
+    color: var(--muted);
+}
+
+
+#username {
+    width: 100%;
+
+    padding: 13px;
+
+    border: 1px solid var(--border);
+
+    outline: none;
+
+    background: white;
+
+    color: var(--text);
+
+    font-family: monospace;
+
+    font-size: 13px;
+}
+
+
+#username:focus {
+    border-color: var(--text);
+}
+
+
+#username::placeholder {
+    color: #aaa;
+}
+
+
+/* =========================================================
+   FOLDER BUTTON
+========================================================= */
+
+#select-folder-btn {
+    width: 100%;
+
+    padding: 13px;
+
+    border: 1px solid var(--border);
+
+    background: white;
+
+    color: var(--text);
+
+    font-size: 11px;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+
+#select-folder-btn:hover {
+    background: #f5f4f0;
+}
+
+
+.folder-name {
+    margin-top: 8px;
+
+    font-family: monospace;
+
+    font-size: 10px;
+
+    color: var(--muted);
+
+    word-break: break-all;
+}
+
+
+/* =========================================================
+   START BUTTON
+========================================================= */
+
+#start-btn {
+    width: 100%;
+
+    margin-top: 30px;
+
+    padding: 14px;
+
+    border: none;
+
+    background: #111;
+
+    color: white;
+
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+#start-btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+
+
+#start-btn:disabled {
+    opacity: 0.3;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.startup-error {
+    min-height: 18px;
+
+    margin-top: 12px;
+
+    color: #c33;
+
+    font-family: monospace;
+
+    font-size: 10px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   HIDE APP BEFORE START
+========================================================= */
+
+body:not(.app-started) .app {
+    visibility: hidden;
+}
+
+
+/* =========================================================
+   STARTUP COMPLETE
+========================================================= */
+
+body.app-started #startup-screen {
+    display: none;
+}
+
+
+body.app-started .app {
+    visibility: visible;
+}
+
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    #startup-screen {
+        padding: 18px;
+    }
+
+
+    .startup-box {
+        padding: 25px;
+    }
+
+
+    .startup-box h1 {
+        font-size: 42px;
+    }
+}

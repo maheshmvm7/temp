@@ -1938,7 +1938,231 @@ function connectUsingPeerId() {
 }
 
 /* =========================================================
+   STARTUP / USER SETUP
+========================================================= */
+
+const startupScreen =
+    document.getElementById("startup-screen");
+
+const usernameInput =
+    document.getElementById("username");
+
+const selectFolderBtn =
+    document.getElementById("select-folder-btn");
+
+const folderName =
+    document.getElementById("folder-name");
+
+const startBtn =
+    document.getElementById("start-btn");
+
+const startupError =
+    document.getElementById("startup-error");
+
+
+let username = "";
+
+let selectedFolder = null;
+
+
+/* =========================================================
+   USERNAME
+========================================================= */
+
+usernameInput.addEventListener(
+    "input",
+    () => {
+
+        username =
+            usernameInput.value.trim();
+
+        updateStartButton();
+    }
+);
+
+
+/* =========================================================
+   SELECT FOLDER
+========================================================= */
+
+selectFolderBtn.addEventListener(
+    "click",
+    async () => {
+
+        startupError.textContent = "";
+
+        /* Check browser support */
+
+        if (
+            typeof window.showDirectoryPicker !==
+            "function"
+        ) {
+
+            startupError.textContent =
+                "Folder selection is not supported here. Use Chrome or Edge over HTTPS or localhost.";
+
+            console.error(
+                "showDirectoryPicker() is not supported."
+            );
+
+            return;
+        }
+
+
+        try {
+
+            /*
+             * Open the native folder picker.
+             */
+
+            const folder =
+                await window.showDirectoryPicker({
+                    mode: "readwrite"
+                });
+
+
+            /*
+             * Store the directory handle.
+             */
+
+            selectedFolder = folder;
+
+
+            /*
+             * Display selected folder.
+             */
+
+            folderName.textContent =
+                folder.name;
+
+
+            startupError.textContent = "";
+
+
+            /*
+             * Enable Continue.
+             */
+
+            updateStartButton();
+
+
+            console.log(
+                "Selected folder:",
+                folder.name
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Folder selection error:",
+                error
+            );
+
+
+            if (
+                error.name ===
+                "AbortError"
+            ) {
+
+                /*
+                 * User clicked Cancel.
+                 */
+
+                return;
+            }
+
+
+            startupError.textContent =
+                "Unable to select folder.";
+        }
+    }
+);
+
+
+/* =========================================================
+   UPDATE CONTINUE BUTTON
+========================================================= */
+
+function updateStartButton() {
+
+    const valid =
+        username.length > 0 &&
+        selectedFolder !== null;
+
+
+    startBtn.disabled =
+        !valid;
+}
+
+
+/* =========================================================
    START APPLICATION
 ========================================================= */
 
-createPeer();
+startBtn.addEventListener(
+    "click",
+    async () => {
+
+        if (
+            !username ||
+            !selectedFolder
+        ) {
+
+            return;
+        }
+
+
+        /*
+         * Save username for this session.
+         */
+
+        sessionStorage.setItem(
+            "p2p-username",
+            username
+        );
+
+
+        /*
+         * Keep the folder handle available
+         * to the current page.
+         */
+
+        window.p2pUser = {
+            username:
+                username,
+
+            folder:
+                selectedFolder
+        };
+
+
+        console.log(
+            "Username:",
+            username
+        );
+
+
+        console.log(
+            "Folder:",
+            selectedFolder.name
+        );
+
+
+        /*
+         * Hide startup screen.
+         */
+
+        document.body.classList.add(
+            "app-started"
+        );
+
+
+        /*
+         * Now initialize PeerJS.
+         */
+
+        createPeer();
+    }
+);

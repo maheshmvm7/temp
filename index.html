@@ -22,7 +22,91 @@
 
 
 <body>
+<!-- =====================================================
+     STARTUP SCREEN
+====================================================== -->
 
+<div id="startup-screen">
+
+    <div class="startup-box">
+
+        <div class="startup-label">
+            P2P FILE TRANSFER
+        </div>
+
+        <h1>
+            Get started
+        </h1>
+
+        <p>
+            Enter your username and choose a folder
+            before connecting to another device.
+        </p>
+
+
+        <!-- USERNAME -->
+
+        <div class="startup-field">
+
+            <label for="username">
+                USERNAME
+            </label>
+
+            <input
+                type="text"
+                id="username"
+                placeholder="Enter username"
+                autocomplete="off"
+                maxlength="30"
+            >
+
+        </div>
+
+
+        <!-- FOLDER -->
+
+        <div class="startup-field">
+
+            <label>
+                TRANSFER FOLDER
+            </label>
+
+            <button
+                type="button"
+                id="select-folder-btn"
+            >
+                Select Folder
+            </button>
+
+            <div
+                id="folder-name"
+                class="folder-name"
+            >
+                No folder selected
+            </div>
+
+        </div>
+
+
+        <!-- CONTINUE -->
+
+        <button
+            type="button"
+            id="start-btn"
+            disabled
+        >
+            Continue
+        </button>
+
+
+        <div
+            id="startup-error"
+            class="startup-error"
+        ></div>
+
+    </div>
+
+</div>
     <main class="app">
 
 
@@ -65,9 +149,9 @@
 
             <div class="toggle-wrapper">
 
-                <button class="toggle-option active" id="show-qr-btn" type="button" >My QR</button>
+                <button class="toggle-option active" id="show-qr-btn" type="button" >Receive</button>
 
-                <button class="toggle-option" id="scan-qr-btn" type="button">Scan QR</button>
+                <button class="toggle-option" id="scan-qr-btn" type="button">send</button>
 
             </div>
 
